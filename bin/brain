@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+require 'bundler/setup'
+Bundler.require :default, :proxy
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'minefold'
+require 'prism/back'
+
+STDOUT.sync = true
+EM.epoll
+
+module Prism
+  EM.run do
+    EM.error_handler do |e|
+      Exceptional.handle(e)
+      raise e
+    end
+    
+    # Pinkies.collect do |pinkies|
+    #   allocator = Allocator.new(pinkies)
+    #   start_options = allocator.start_options_for_new_world(4)
+    #   p start_options
+    # end
+
+    subscription = PrismRedis.connect
+    subscription.psubscribe "worlds:*"
+    subscription.psubscribe "workers:*"
+    subscription.on :pmessage do |key, channel, message|
+      Prism::Messaging.deliver_message channel, message
+    end
+
+    [ PlayerConnectionRequest,
+      PlayerConnectedEvent,
+      PlayerMinutePlayedEvent,
+      PlayerDisconnectedEvent,
+      PlayerWorldRequest,
+      WorkerStopRequest,
+      WorkerCreateRequest,
+      WorldStartRequest,
+      WorldMoveRequest ].each do |klass|
+        QueueProcessor.new klass
+    end
+
+    puts "Started. #{Fold.env} mode"
+
+  end
+end
