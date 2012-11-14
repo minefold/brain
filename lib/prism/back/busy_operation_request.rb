@@ -15,14 +15,12 @@ module Prism
       deferrable = perform_operation
       deferrable.callback do |result|
         operation_succeeded result
-        StatsD.increment_and_measure_from start_time, "#{statsd_key}.successful"
         yield
       end
 
       deferrable.errback do |error|
         error "operation failed", error
         operation_failed
-        StatsD.increment_and_measure_from start_time, "#{statsd_key}.failed"
         yield
       end
     end

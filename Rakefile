@@ -34,18 +34,6 @@ def redis_connect
   Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 end
 
-require 'resque'
-require 'resque/tasks'
-
-task "resque:setup" do
-  require 'bundler/setup'
-  Bundler.require :default, :chatty
-  require 'minefold'
-
-  if REDISTOGO_URL
-    Resque.redis = redis_connect
-  end
-end
 
 namespace :jobs do
   task :world_started => "resque:setup" do

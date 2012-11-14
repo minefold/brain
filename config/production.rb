@@ -24,10 +24,6 @@ Storage.provider = Fog::Storage.new({
   :aws_access_key_id        => EC2_ACCESS_KEY
 })
 
-StatsD.server = 'stats.minefold.com:8125'
-StatsD.logger = Logger.new('/dev/null')
-StatsD.mode = :production
-
 ENV['RACK_ENV'] = 'production' # exceptional gem looks at this ENV
 Exceptional::Config.load("#{ROOT}/config/exceptional.yml")
 

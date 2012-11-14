@@ -30,11 +30,13 @@ class Model
 
   def self.find_all options = {}, *a, &b
     cb = EM::Callback *a, &b
+
     EM.defer(proc {
       mongo_collection.find options
     }, proc { |docs|
       cb.call docs.map{|doc| new(doc) }
     })
+
     cb
   end
 

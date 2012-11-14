@@ -8,7 +8,8 @@ module Prism
     end
 
     def start_options_for_new_world(player_slots_required)
-      player_slots_required = [4, player_slots_required].max
+      
+      player_slots_required = [4, (player_slots_required || 4)].max
 
       if pinky = find_pinky_for_new_world(player_slots_required)
         slots_required = (player_slots_required / [pinky.box_type.players_per_slot, 4].max.to_f).ceil

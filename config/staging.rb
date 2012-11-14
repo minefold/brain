@@ -23,7 +23,4 @@ Storage.provider = Fog::Storage.new({
   :aws_access_key_id        => EC2_ACCESS_KEY
 })
 
-StatsD.logger = Logger.new('/dev/null')
-StatsD.mode = :development
-
 TEST_PRISM="prism.staging.minefold.com"
