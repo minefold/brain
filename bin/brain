@@ -1,48 +1,78 @@
 #!/usr/bin/env ruby
 # encoding: UTF-8
 require 'bundler/setup'
-Bundler.require :default, :proxy
-
-$:.unshift File.join File.dirname(__FILE__), '../lib'
-require 'minefold'
-require 'prism/back'
+require 'json'
+Bundler.require
 
 STDOUT.sync = true
-EM.epoll
 
-module Prism
-  EM.run do
-    EM.error_handler do |e|
-      Exceptional.handle(e)
-      raise e
+$redis = Redis.new
+
+# This is the real guts of Brain.
+def choose_optimal_box(universe)
+  box, resources = universe.first
+  return box
+end
+
+loop do
+  list, raw = $redis.blpop('partycloud:brain:in')
+
+  # TODO Handle JSON parse error
+  job = JSON.parse(raw)
+
+  p job
+
+  case job['name']
+  when 'start_server'
+    funpack_id, settings, world_id = job['args']
+
+    # Validate funpack
+    # Validate world
+
+    server_id = rand(1000) # Create server ID
+
+    # Find all boxes that are currently up
+    boxen = $redis.keys('pinky:state:*')
+                  .map {|key| [key, $redis.get(key)] }
+                  .select {|(key, state)| state == 'up' }
+                  .map {|(key, _)| key.gsub(/^pinky:state:/, '') }
+
+    # Fetch their resources
+    universe = boxen.map do |box|
+      [box, $redis.hgetall("pinky:#{box}:heartbeat")]
     end
-    
-    # Pinkies.collect do |pinkies|
-    #   allocator = Allocator.new(pinkies)
-    #   start_options = allocator.start_options_for_new_world(4)
-    #   p start_options
-    # end
 
-    subscription = PrismRedis.connect
-    subscription.psubscribe "worlds:*"
-    subscription.psubscribe "workers:*"
-    subscription.on :pmessage do |key, channel, message|
-      Prism::Messaging.deliver_message channel, message
-    end
+    # Choose the box that is optimal for for running the server
+    box = choose_optimal_box(universe)
 
-    [ PlayerConnectionRequest,
-      PlayerConnectedEvent,
-      PlayerMinutePlayedEvent,
-      PlayerDisconnectedEvent,
-      PlayerWorldRequest,
-      WorkerStopRequest,
-      WorkerCreateRequest,
-      WorldStartRequest,
-      WorldMoveRequest ].each do |klass|
-        QueueProcessor.new klass
-    end
+    # Send a job to that box
+    payload = JSON.generate({
+      name:     'start',
+      serverId: server_id,
+      funpack:  "s3://minefold/funpacks/#{funpack_id}.tar.lzo",
+      settings: settings,
+      world:    "s3://minefold/worlds/#{world_id}.tar.lzo"
+    })
 
-    puts "Started. #{Fold.env} mode"
+    $redis.rpush("box:#{box}:queue", payload)
+
+    puts "listening on", "server:state:#{server_id}"
+
+    # For those playing along at home, this is what you copy and paste into the Redis CLI.
+    puts "lpush server:state:#{server_id} '{\"id\":#{server_id},\"state\":\"up\"}'"
+
+    # Yay! We're done here.
+    _, server = $redis.blpop("server:state:#{server_id}")
+    puts server.green
+
+  when 'stop_server'
+    server_id = job['args']
+
+  when 'import_world'
+
+  when 'server_started'
+    id = *job['args']
 
   end
+
 end
