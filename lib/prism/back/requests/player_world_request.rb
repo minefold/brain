@@ -14,16 +14,18 @@ module Prism
     def run
       redis.get "server:#{world_id}:state" do |state|
         if state == 'up'
-          redis.get_json("box:#{pinky_id}") do |pinky|
-            redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
-              redis.publish_json "worlds:requests:start:#{server_id}", {
-                host: pinky['ip'],
-                port: ps['port']
-              }
+          redis.keys("pinky:*:servers:#{world_id}") do |keys|
+            if key = keys.first
+              pinky_id = key.split(':')[1]
+              redis.get_json("box:#{pinky_id}") do |pinky|
+                redis.get_json("pinky:#{pinky_id}:servers:#{world_id}") do |ps|
+                  connect_player_to_world pinky['ip'], ps['port']
+                end
+              end
+            else
+              reject_player username, '500'
             end
           end
-          
-          connect_player_to_world world['host'], world['port']
         else
           start_world
         end
