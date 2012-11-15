@@ -14,34 +14,35 @@ module Prism
     end
 
     def run
-      state = redis.get "server/state/#{world_id}"
-      case state
-      when 'up'
-        debug "world:#{world_id} is already running"
-        reply world
+      redis.get "server:#{world_id}:state" do |state|
+        case state
+        when 'up'
+          debug "world:#{world_id} is already running"
+          reply world
 
-      when 'starting'
-        debug "world:#{world_id} start already requested"
-        respond_to_world_start_event
+        when 'starting'
+          debug "world:#{world_id} start already requested"
 
-      when 'stopping'
-        debug "world:#{world_id} is stopping. will request start when stopped"
-        redis.set_busy "worlds:busy", world_id, 'stopping => starting', expires_after: 120
-        listen_once "worlds:requests:stop:#{world_id}" do
-          debug "world:#{world_id} stopped. Requesting restart"
+        when 'stopping'
+          # TODO
+          debug "world:#{world_id} is stopping. will request start when stopped"
+          # redis.set_busy "worlds:busy", world_id, 'stopping => starting', expires_after: 120
+          # listen_once "worlds:requests:stop:#{world_id}" do
+          #   debug "world:#{world_id} stopped. Requesting restart"
+          #   start_world
+          # end
+
+        else
+          debug "world:#{world_id} is not running"
           start_world
         end
-
-      else
-        debug "world:#{world_id} is not running"
-        start_world
       end
     end
 
     def start_world
       debug "getting world:#{world_id} started"
       
-      redis.set "server/state/#{world_id}", "starting"
+      redis.set "server:#{world_id}:state", "starting"
 
       World.find(world_id) do |world|
         if world.nil?
@@ -117,7 +118,7 @@ module Prism
 
       options['name'] = 'start'
 
-      redis.lpush_hash "pinky/#{pinky_id}/jobs", options
+      redis.lpush_hash "pinky:#{pinky_id}:in", options
     end
   end
 end

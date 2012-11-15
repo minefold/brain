@@ -22,11 +22,11 @@ module Prism
 
     def self.inject_heartbeats(initial, *a, &b)
       cb = EM::Callback(*a, &b)
-      redis.keys("pinky/*/heartbeat") do |keys|
+      redis.keys("pinky:*:heartbeat") do |keys|
         EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
           redis.get(key) do |hb|
 
-            id = key.split('/')[1]
+            id = key.split(':')[1]
 
             h[id] ||= {}
             h[id].merge!(JSON.load(hb))
@@ -40,10 +40,10 @@ module Prism
 
     def self.inject_pinky_states(initial, *a, &b)
       cb = EM::Callback(*a, &b)
-      redis.keys("pinky/*/state") do |keys|
+      redis.keys("pinky:*:state") do |keys|
         EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
           redis.get(key) do |state|
-            id = key.split('/')[1]
+            id = key.split(':')[1]
 
             h[id] ||= {}
             h[id].merge!('state' => state)
@@ -57,10 +57,10 @@ module Prism
 
     def self.inject_pinky_servers(initial, *a, &b)
       cb = EM::Callback(*a, &b)
-      redis.keys("pinky/*/servers/*") do |keys|
+      redis.keys("pinky:*:servers:*") do |keys|
         EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
           redis.get(key) do |state|
-            _, pinky_id, _, server_id = key.split('/')
+            _, pinky_id, _, server_id = key.split(':')
 
             h[pinky_id] ||= {}
             h[pinky_id]['servers'] ||= []
@@ -75,10 +75,10 @@ module Prism
 
     def self.inject_box_info(initial, *a, &b)
       cb = EM::Callback(*a, &b)
-      redis.keys("box/*/info") do |keys|
+      redis.keys("box:*") do |keys|
         EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
           redis.get(key) do |info|
-            id = key.split('/')[1]
+            id = key.split(':')[1]
 
             h[id] ||= {}
             h[id].merge!(JSON.load(info))

@@ -3,7 +3,7 @@ module Prism
     include ChatMessaging
     include Logging
     
-    process "server/events", :pinky_id, :server_id, :ts, :type, :msg
+    process "server:events", :pinky_id, :server_id, :ts, :type, :msg
 
     log_tags :world_id, :player_id, :username
 
@@ -24,8 +24,8 @@ module Prism
     end
     
     def server_started
-      redis.get_json("box/#{pinky_id}/info") do |pinky|
-        redis.get_json("pinky/#{pinky_id}/servers/#{server_id}") do |ps|
+      redis.get_json("box:#{pinky_id}") do |pinky|
+        redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
           redis.publish_json "worlds:requests:start:#{server_id}", {
             host: pinky['ip'],
             port: ps['port']

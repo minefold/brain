@@ -2,7 +2,7 @@
 
 ![The Brain](http://www.badhaven.com/wp-content/uploads/2012/07/the-brain.jpg)
 
-# API
+## API
 
 start_server
   - id                    # if ommitted will create new server_id
@@ -20,12 +20,28 @@ stop_server
 import_world
   - url
 
-# Callbacks
+## Callbacks
 
 server_started
   - id
   - host
+  
+## Redis keys
 
-# TODO
+      LIST partycloud:brain:in
+       SET boxes
+    STRING box:#{box_id}
+       SET servers
+    STRING server:#{box_id}:state
+      LIST server:events
+       SET pinkies
+    STRING pinky:#{pinky_id}:state
+    STRING pinky:#{pinky_id}:heartbeat
+       SET pinky:#{pinky_id}:servers
+    STRING pinky:#{pinky_id}:server:#{server_id}
+      LIST pinky:#{pinky_id}:in
+
+
+## TODO
 
 Auth/user accounts. Currently the only user is Minefold

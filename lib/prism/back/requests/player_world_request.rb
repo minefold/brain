@@ -12,8 +12,17 @@ module Prism
     attr_reader :instance_id
 
     def run
-      redis.get "server/state/#{world_id}" do |state|
+      redis.get "server:#{world_id}:state" do |state|
         if state == 'up'
+          redis.get_json("box:#{pinky_id}") do |pinky|
+            redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
+              redis.publish_json "worlds:requests:start:#{server_id}", {
+                host: pinky['ip'],
+                port: ps['port']
+              }
+            end
+          end
+          
           connect_player_to_world world['host'], world['port']
         else
           start_world
