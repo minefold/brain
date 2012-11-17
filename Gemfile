@@ -15,10 +15,10 @@ gem "redis", ">= 2.2.0", :require => ["redis/connection/hiredis", "redis"]
 gem 'em-hiredis', '~> 0.1.1'
 gem 'hirb'
 gem 'exceptional'
+gem 'colored'
 
 group :development do
   gem 'pry'
-  gem 'colored'
 end
 
 group :test do
