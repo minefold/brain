@@ -16,6 +16,7 @@ gem 'em-hiredis', '~> 0.1.1'
 gem 'hirb'
 gem 'exceptional'
 gem 'colored'
+gem 'uuid'
 
 group :development do
   gem 'pry'

@@ -160,7 +160,7 @@ module Prism
 
     def start_new_box box_type
       info "starting new box"
-      request_id = `uuidgen`.strip
+      request_id = UUID.new.generate
       Prism.redis.lpush_hash "workers:requests:create", box_type.to_hash.merge(request_id:request_id)
     end
 

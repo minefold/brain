@@ -14,7 +14,7 @@ class MinecraftPlayer < Model
     default_properties = {
       slug: slug,
       username: username,
-      distinct_id: `uuidgen`.strip,
+      distinct_id: UUID.new.generate,
       created_at: Time.now,
       updated_at: Time.now,
       unlock_code: rand(36 ** 4).to_s(36),
