@@ -10,12 +10,14 @@ module Prism
     def run
       log = Brain::Logger.new
 
-      log.info event: 'server_event',
-        pinky_id: pinky_id,
-        server_id: server_id,
-        server_ts: ts,
-        type: type,
-        msg: msg
+      if type != 'info'
+        log.info event: 'server_event',
+          pinky_id: pinky_id,
+          server_id: server_id,
+          server_ts: ts,
+          type: type,
+          msg: msg
+      end
 
       case type
       when 'started'

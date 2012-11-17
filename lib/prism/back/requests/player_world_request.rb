@@ -1,3 +1,5 @@
+# TODO this logic belongs in Minefold not the Partycloud
+
 module Prism
   class PlayerWorldRequest < Request
     include Messaging
@@ -35,6 +37,7 @@ module Prism
     def start_world
       debug "world:#{world_id} is not running"
       redis.lpush_hash "worlds:requests:start", world_id: world_id
+      redis.sadd "servers:shared", world_id
       listen_once_json "worlds:requests:start:#{world_id}" do |world|
         if world['host']
           connect_player_to_world world['host'], world['port']

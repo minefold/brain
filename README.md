@@ -32,6 +32,7 @@ server_started
        SET boxes
     STRING box:#{box_id}
        SET servers
+       SET servers:shared
     STRING server:#{box_id}:state
       LIST server:events
        SET pinkies

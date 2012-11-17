@@ -9,7 +9,7 @@ module Prism
 
     attr_writer :redis_factory
     def hiredis_connect
-      @redis_factory ? @redis_factory.call : EM::Hiredis.connect(ENV['REDISTOGO_URL'] || REDISTOGO_URL)
+      @redis_factory ? @redis_factory.call : EM::Hiredis.connect(ENV['REDIS_URL'] || 'redis://localhost:6379/')
     end
 
     attr_accessor :prism_id

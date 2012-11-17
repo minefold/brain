@@ -1,6 +1,8 @@
 require 'eventmachine/periodic_timer_with_timeout'
 require 'eventmachine/cancellable_timeout'
 
+# TODO this logic belongs in Minefold, not the Partycloud
+
 module Prism
   class PlayerConnectionRequest < Request
     include Messaging
