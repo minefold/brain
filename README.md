@@ -1,5 +1,6 @@
 # Brain
-© Mütli Corp. By [Dave Newman](http://github.com/whatupdave).
+
+[![Build Status](https://magnum.travis-ci.com/minefold/brain.png?token=yfARxv3oq7ZT3ZbmJWVN)](http://magnum.travis-ci.com/minefold/brain) © Mütli Corp. By [Dave Newman](http://github.com/whatupdave).
 
 ![The Brain](http://www.badhaven.com/wp-content/uploads/2012/07/the-brain.jpg)
 
