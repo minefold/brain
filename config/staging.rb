@@ -3,7 +3,6 @@ ROOT = File.expand_path "../..", __FILE__
 # TODO: put these somewhere more secure
 EC2_SECRET_KEY="4VI8OqUBN6LSDP6cAWXUo0FM1L/uURRGIGyQCxvq"
 EC2_ACCESS_KEY="AKIAJPN5IJVEBB2QE35A"
-MONGOHQ_URL="mongodb://staging:Cio08ziLi5mAHa8qUud8@arrow.mongohq.com:27023/staging"
 WORLDS_BUCKET = OLD_WORLDS_BUCKET = 'minefold-staging-worlds'
 INCREMENTAL_WORLDS_BUCKET = ENV['INCREMENTAL_WORLDS_BUCKET'] || 'minefold-staging'
 
