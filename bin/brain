@@ -4,11 +4,20 @@ require 'bundler/setup'
 Bundler.require :default, :proxy
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'brain'
 require 'minefold'
 require 'prism/back'
 
 STDOUT.sync = true
 EM.epoll
+
+Bugsnag.configure do |config|
+  config.api_key = ENV['BUGSNAG']
+  config.release_stage = Brain.env
+  config.project_root = Brain.root
+  config.notify_release_stages = ['production', 'staging']
+  config.use_ssl = true
+end
 
 module Prism
   EM.run do
@@ -16,7 +25,7 @@ module Prism
       Exceptional.handle(e)
       raise e
     end
-    
+
     # Pinkies.collect do |pinkies|
     #   allocator = Allocator.new(pinkies)
     #   start_options = allocator.start_options_for_new_world(4)

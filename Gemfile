@@ -17,6 +17,7 @@ gem 'hirb'
 gem 'exceptional'
 gem 'colored'
 gem 'uuid'
+gem 'bugsnag'
 
 group :development do
   gem 'pry'
