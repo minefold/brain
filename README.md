@@ -1,4 +1,5 @@
 # Brain
+© Mütli Corp. By [Dave Newman](http://github.com/whatupdave).
 
 ![The Brain](http://www.badhaven.com/wp-content/uploads/2012/07/the-brain.jpg)
 
@@ -10,7 +11,7 @@ start_server
   - world_id              # optional
   - restart (bool)        # should the server restart if running
   - settings
-  
+
   # returns
   - id
 
@@ -25,7 +26,7 @@ import_world
 server_started
   - id
   - host
-  
+
 ## Redis keys
 
       LIST partycloud:brain:in
@@ -46,3 +47,18 @@ server_started
 ## TODO
 
 Auth/user accounts. Currently the only user is Minefold
+
+## Usage
+
+    foreman start
+
+### Environment
+
+*Required*
+
+    BUGSNAG
+
+*Optional*
+
+    BRAIN_ENV (staging|production)
+    BRAIN_ROOT
