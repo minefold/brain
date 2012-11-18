@@ -18,6 +18,7 @@ gem 'exceptional'
 gem 'colored'
 gem 'uuid'
 gem 'bugsnag'
+gem 'pg'
 
 group :development do
   gem 'pry'

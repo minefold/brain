@@ -17,28 +17,86 @@ module Prism
     def kick_player message
       redis.publish "players:disconnect:#{username}", message
     end
+    
+    def whitelisted?(username, settings)
+      whitelist = settings['whitelist'] || ''
+      ops = settings['ops'] || ''
+
+      (whitelist.split("\n") + ops.split("\n")).include?(username)
+    end
 
     def run
       debug "processing #{username} #{target_host}"
 
-      MinecraftPlayer.upsert_by_username_with_user(username, remote_ip) do |player, new_record|
-        debug "player:#{player.id} user:#{player.user.id if player.user}"
-        @mp_id, @mp_name, @remote_ip = player.distinct_id.to_s, player.username, player.last_remote_ip
+      url = URI.parse(ENV['DATABASE_URL'])
+      $pg = PG::Connection.new(
+        host: url.host,
+        port: url.port,
+        user: url.user,
+        password: url.password,
+        dbname:url.path[1..-1]
+      )
 
-        # TODO: support other hosts besides minefold.com
-        if target_host =~ /^(\w+)\.(\w{1,16})\.minefold\.com\:?(\d+)?$/
-          if $2 == 'verify'
-            verify_player player, $1
-          else
-            World.find_by_name($2, $1) do |world|
-              connect_unvalidated_player_to_unknown_world(player, world)
-            end
-          end
+      host = target_host.split(':')[0]
+
+      EM.defer(proc {
+        servers = $pg.query('select party_cloud_id, settings from servers where host=$1 limit 1', [host])
+        players = $pg.query(%Q{
+            select players.id, users.credits from players
+              inner join users on users.id = players.user_id
+            where players.game_id=$1 and players.uid=$2 limit 1
+          }, [1, username])
+        [servers, players]
+      }, proc {|servers, players|
+
+        if players.count == 0
+          reject_player username, "Sign up to play here at minefold.com"
+
+        elsif servers.count == 0
+          reject_player username, "No server found, visit minefold.com"
+
         else
-          # connecting to a different host, probably pluto, old sk00l
-          connect_to_current_world player
+          party_cloud_id = servers.getvalue(0,0)
+          settings = JSON.load(servers.getvalue(0,1))
+
+          player_id = players.getvalue(0,0)
+          credits = players.getvalue(0,1).to_i
+
+          if credits <= 0
+            reject_player username, 'No credits. Buy more at minefold.com'
+
+          elsif !whitelisted?(username, settings)
+            reject_player username, 'You are not white-listed on this server. Visit minefold.com'
+
+          else
+            redis.lpush_hash "players:world_request",
+             username: username,
+             player_id: player_id,
+              world_id: party_cloud_id
+          end
         end
-      end
+      })
+
+
+
+      # MinecraftPlayer.upsert_by_username_with_user(username, remote_ip) do |player, new_record|
+      #       debug "player:#{player.id} user:#{player.user.id if player.user}"
+      #       @mp_id, @mp_name, @remote_ip = player.distinct_id.to_s, player.username, player.last_remote_ip
+      #
+      #       # TODO: support other hosts besides minefold.com
+      #       if target_host =~ /^(\w+)\.(\w{1,16})\.minefold\.com\:?(\d+)?$/
+      #         if $2 == 'verify'
+      #           verify_player player, $1
+      #         else
+      #           World.find_by_name($2, $1) do |world|
+      #             connect_unvalidated_player_to_unknown_world(player, world)
+      #           end
+      #         end
+      #       else
+      #         # connecting to a different host, probably pluto, old sk00l
+      #         connect_to_current_world player
+      #       end
+      #     end
     end
 
     def verify_player player, token
