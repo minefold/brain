@@ -105,16 +105,8 @@ module Prism
 
     def connect_unvalidated_player_to_unknown_world player, world
       if world
-        world.has_data_file? do |has_data_file|
-          if has_data_file
-            debug "world:#{world.id} found"
-            connect_unvalidated_player_to_world player, world
-          else
-            error "world:#{world.id} data_file:#{world.world_data_file} does not exist"
-            reject_player username, '500',
-              details: "world data #{world.world_data_file} not found"
-          end
-        end
+        debug "world:#{world.id} found"
+        connect_unvalidated_player_to_world player, world
       else
         debug "world not found"
         reject_player username, :unknown_world
@@ -252,16 +244,8 @@ module Prism
     # TODO: remove this old school path
     def connect_to_world player, world
       if world
-        world.has_data_file? do |has_data_file|
-          if has_data_file
-            debug "world:#{world.id} found"
-            connect_unvalidated_player_to_current_world player, world
-          else
-            error "world:#{world.id} data_file:#{world.world_data_file} does not exist"
-            reject_player username, '500',
-              details:"world data #{world.world_data_file} not found"
-          end
-        end
+        debug "world:#{world.id} found"
+        connect_unvalidated_player_to_current_world player, world
       else
         debug "old sk00l world not found"
         reject_player username, :no_world
