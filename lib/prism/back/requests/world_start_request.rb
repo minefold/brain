@@ -95,13 +95,16 @@ module Prism
         start_options.merge!(
           'serverId' => world_id,
           'funpack' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
-          'world' => "https://minefold-development.s3.amazonaws.com/worlds/#{world.world_data_file}",
           'settings' => {
             'ops' => (opped_players.map(&:username) | World::DEFAULT_OPS).uniq,
             'whitelisted' => whitelisted_players.map(&:username).uniq,
             'banned' => banned_players.map(&:username).uniq,
           }
         )
+        
+        if world.world_data_file
+          start_options['world'] = world.world_data_file
+        end
 
         start_options['settings'].merge!(
           world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] }
