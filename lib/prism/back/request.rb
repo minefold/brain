@@ -18,8 +18,6 @@ module Prism
     def process message
       parts = self.class.message_parts.size == 1 ? { self.class.message_parts.first => message } : JSON.parse(message)
       
-      p message
-
       parts.each{|k,v| self.instance_variable_set(:"@#{k}", v) }
 
       run

@@ -20,6 +20,8 @@ gem 'uuid'
 gem 'bugsnag'
 gem 'pg'
 
+gem 'resque'
+
 group :development do
   gem 'pry'
 end

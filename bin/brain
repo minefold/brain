@@ -43,7 +43,8 @@ module Prism
       ServerEvent,
       WorkerStopRequest,
       WorkerCreateRequest,
-      WorldStartRequest,
+      ServerStartRequest,
+      ServerStopRequest,
       WorldMoveRequest ].each do |klass|
         QueueProcessor.new klass
     end

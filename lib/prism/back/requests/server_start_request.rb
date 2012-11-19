@@ -1,11 +1,11 @@
 module Prism
-  class WorldStartRequest < Request
+  class ServerStartRequest < Request
     include Logging
     include Messaging
 
-    process "worlds:requests:start", :server_id, :settings, :funpack_id, :player_slots
+    process "worlds:requests:start", :server_id, :world_id, :settings, :funpack_id, :player_slots
 
-    attr_reader :server_id, :settings, :funpack_id
+    attr_reader :server_id, :world_id, :settings, :funpack_id
 
     log_tags :server_id
 

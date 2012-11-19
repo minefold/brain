@@ -59,11 +59,12 @@ module Prism
         end
       end
 
-      if player.credits == 30 and user = player.user
-        EM.defer do
-          UserMailer.credit_reminder(user.id.to_s)
-        end
-      end
+      # TODO credit reminder job
+      # if player.credits == 30 and user = player.user
+      #   EM.defer do
+      #     Resque.push 'mailer', 'CreditReminder', user.id.to_s
+      #   end
+      # end
     end
 
     def send_onboarding_messages session_minutes, player

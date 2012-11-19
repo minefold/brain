@@ -3,7 +3,7 @@ module Prism
     include ChatMessaging
     include Logging
     
-    process "server:events", :pinky_id, :server_id, :ts, :type, :msg
+    process "server:events", :pinky_id, :server_id, :server_ts, :type, :msg, :level
 
     log_tags :world_id, :player_id, :username
 
