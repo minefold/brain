@@ -3,48 +3,43 @@ module Prism
     include Logging
     include Messaging
 
-    process "worlds:requests:start", :world_id, :player_slots
+    process "worlds:requests:start", :server_id, :settings, :funpack_id, :player_slots
 
-    attr_reader :world_id
+    attr_reader :server_id, :settings, :funpack_id
 
-    log_tags :world_id
+    log_tags :server_id
 
     def reply options = {}
-      redis.publish_json "worlds:requests:start:#{world_id}", options
+      redis.publish_json "worlds:requests:start:#{server_id}", options
     end
 
     def run
-      redis.get "server:#{world_id}:state" do |state|
+      redis.get "server:#{server_id}:state" do |state|
         case state
         when 'up'
-          debug "world:#{world_id} is already running"
+          debug "world:#{server_id} is already running"
           reply world
 
         when 'starting'
-          debug "world:#{world_id} start already requested"
+          debug "world:#{server_id} start already requested"
 
         when 'stopping'
           # TODO
-          debug "world:#{world_id} is stopping. will request start when stopped"
-          # redis.set_busy "worlds:busy", world_id, 'stopping => starting', expires_after: 120
-          # listen_once "worlds:requests:stop:#{world_id}" do
-          #   debug "world:#{world_id} stopped. Requesting restart"
-          #   start_world
-          # end
+          debug "world:#{server_id} is stopping. will request start when stopped"
 
         else
-          debug "world:#{world_id} is not running"
+          debug "world:#{server_id} is not running"
           start_world
         end
       end
     end
 
     def start_world
-      debug "getting world:#{world_id} started"
-      
-      redis.set "server:#{world_id}:state", "starting"
+      debug "getting world:#{server_id} started"
 
-      World.find(world_id) do |world|
+      redis.set "server:#{server_id}:state", "starting"
+
+      World.find(server_id) do |world|
         if world.nil?
           reply failed: 'no_world'
         else
@@ -54,7 +49,7 @@ module Prism
             start_options = allocator.start_options_for_new_world(slots_required)
 
             if start_options and start_options[:pinky_id]
-              add_server_settings world, start_options
+              start_with_settings world, start_options
 
             else
               info "no instances available"
@@ -65,59 +60,39 @@ module Prism
       end
     end
 
-    def add_server_settings world, start_options
-      opped_player_ids = Array(world.opped_player_ids)
-      whitelisted_player_ids = Array(world.whitelisted_player_ids)
-      banned_player_ids = Array(world.banned_player_ids)
+    def start_with_settings world, start_options
+      # TODO store in database
+      funpacks = {
+        '50a976ec7aae5741bb000001' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
+        '50a976fb7aae5741bb000002' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-essentials/1.tar.lzo',
+        '50a977097aae5741bb000003' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-tekkit/1.tar.lzo',
+      }
+      
+      funpack = funpacks[funpack_id]
+      
+      if funpack.nil?
+        reply failed: "No funpack found for #{funpack_id}"
 
-      world_player_ids = opped_player_ids | whitelisted_player_ids | banned_player_ids
-
-      MinecraftPlayer.find_all(deleted_at: nil, _id: {'$in' => world_player_ids}) do |world_players|
-        opped_players = world_players.select{|p| opped_player_ids.include?(p.id)}
-        whitelisted_players = world_players.select{|p| whitelisted_player_ids.include?(p.id)}
-        banned_players = world_players.select{|p| banned_player_ids.include?(p.id)}
-
-        world_settings = %w(
-          minecraft_version
-          seed
-          level_type
-          online_mode
-          difficulty
-          game_mode
-          pvp
-          spawn_animals
-          spawn_monsters)
-
+      else
         start_options.merge!(
-          'serverId' => world_id,
-          'funpack' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
-          'settings' => {
-            'ops' => (opped_players.map(&:username) | World::DEFAULT_OPS).uniq,
-            'whitelisted' => whitelisted_players.map(&:username).uniq,
-            'banned' => banned_players.map(&:username).uniq,
-          }
+          'serverId' => server_id,
+          'funpack' => funpack,
+          'settings' => settings
         )
-        
+
         if world.world_data_file
           start_options['world'] = world.world_data_file
         end
 
-        start_options['settings'].merge!(
-          world_settings.each_with_object({}){|setting, h| h[setting] = world.doc[setting] }
-        )
         debug "start options: #{start_options}"
 
-        start_world_with_options start_options
+        pinky_id = start_options[:pinky_id]
+        debug "starting world:#{server_id} on pinky:#{pinky_id} heap:#{start_options[:heap_size]}"
+
+        start_options['name'] = 'start'
+
+        redis.lpush_hash "pinky:#{pinky_id}:in", start_options
       end
-    end
-
-    def start_world_with_options options
-      pinky_id = options[:pinky_id]
-      debug "starting world:#{world_id} on pinky:#{pinky_id} heap:#{options[:heap_size]}"
-
-      options['name'] = 'start'
-
-      redis.lpush_hash "pinky:#{pinky_id}:in", options
     end
   end
 end

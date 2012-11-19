@@ -41,7 +41,6 @@ module Prism
 
     [ PlayerConnectionRequest,
       ServerEvent,
-      PlayerWorldRequest,
       WorkerStopRequest,
       WorkerCreateRequest,
       WorldStartRequest,

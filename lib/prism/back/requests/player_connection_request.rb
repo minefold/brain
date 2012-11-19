@@ -17,7 +17,7 @@ module Prism
     def kick_player message
       redis.publish "players:disconnect:#{username}", message
     end
-    
+
     def whitelisted?(username, settings)
       whitelist = settings['whitelist'] || ''
       ops = settings['ops'] || ''
@@ -40,282 +40,106 @@ module Prism
       host = target_host.split(':')[0]
 
       EM.defer(proc {
-        servers = $pg.query('select party_cloud_id, settings from servers where host=$1 limit 1', [host])
+        servers = $pg.query(%Q{
+            select servers.party_cloud_id,
+                   servers.settings,
+                   funpacks.party_cloud_id,
+                   worlds.party_cloud_id
+
+            from servers
+              inner join funpacks on servers.funpack_id = funpacks.id
+               left join worlds on worlds.server_id = servers.id
+
+            where host=$1 and deleted_at is null
+            limit 1
+          }, [host])
+
         players = $pg.query(%Q{
             select players.id, users.credits from players
               inner join users on users.id = players.user_id
-            where players.game_id=$1 and players.uid=$2 limit 1
+            where players.game_id=$1
+              and players.uid=$2
+              and users.deleted_at is null
+            limit 1
           }, [1, username])
+
         [servers, players]
       }, proc {|servers, players|
 
         if players.count == 0
-          reject_player username, "Sign up to play here at minefold.com"
+          kick_player "Sign up to play here at minefold.com"
 
         elsif servers.count == 0
-          reject_player username, "No server found, visit minefold.com"
+          kick_player "No server found, visit minefold.com"
 
         else
-          party_cloud_id = servers.getvalue(0,0)
+          server_id = servers.getvalue(0,0)
           settings = JSON.load(servers.getvalue(0,1))
-
+          funpack_id = servers.getvalue(0,2)
+          
           player_id = players.getvalue(0,0)
           credits = players.getvalue(0,1).to_i
 
           if credits <= 0
-            reject_player username, 'No credits. Buy more at minefold.com'
+            kick_player 'No credits. Buy more at minefold.com'
 
           elsif !whitelisted?(username, settings)
-            reject_player username, 'You are not white-listed on this server. Visit minefold.com'
+            kick_player 'You are not white-listed on this server. Visit minefold.com'
 
           else
-            redis.lpush_hash "players:world_request",
-             username: username,
-             player_id: player_id,
-              world_id: party_cloud_id
+            player_allowed_to_connect player_id, server_id, funpack_id, settings
           end
         end
       })
-
-
-
-      # MinecraftPlayer.upsert_by_username_with_user(username, remote_ip) do |player, new_record|
-      #       debug "player:#{player.id} user:#{player.user.id if player.user}"
-      #       @mp_id, @mp_name, @remote_ip = player.distinct_id.to_s, player.username, player.last_remote_ip
-      #
-      #       # TODO: support other hosts besides minefold.com
-      #       if target_host =~ /^(\w+)\.(\w{1,16})\.minefold\.com\:?(\d+)?$/
-      #         if $2 == 'verify'
-      #           verify_player player, $1
-      #         else
-      #           World.find_by_name($2, $1) do |world|
-      #             connect_unvalidated_player_to_unknown_world(player, world)
-      #           end
-      #         end
-      #       else
-      #         # connecting to a different host, probably pluto, old sk00l
-      #         connect_to_current_world player
-      #       end
-      #     end
     end
 
-    def verify_player player, token
-      if player.verified?
-        Resque.push 'high', class: 'UserAlreadyVerifiedJob', args: [username, token]
-        kick_player "#{username} is linked to a different minefold.com account!"
-
-      else
-        debug "verifying player with code:#{token}"
-        User.find_by_verification_token(token) do |user|
-          if user
-            puts "authenticating #{user.inspect}"
-            authenticate_player do |result|
-              puts "authentication result #{result}"
-
-              case result
-              when :success
-                Resque.push 'high', class: 'UserVerifiedJob', args: [username, token]
-                kick_player "Done! Your account is now verified"
-
-              when :invalid_player
-                kick_player "Bad account! #{username} is not a real minecraft.net account"
-
+    def player_allowed_to_connect player_id, server_id, funpack_id, settings
+      redis.get "server:#{server_id}:state" do |state|
+        if state == 'up'
+          redis.keys("pinky:*:servers:#{server_id}") do |keys|
+            if key = keys.first
+              pinky_id = key.split(':')[1]
+              redis.get_json("box:#{pinky_id}") do |pinky|
+                redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
+                  connect_player_to_server player_id, server_id, pinky['ip'], ps['port']
+                end
               end
-            end
-          else
-            debug "invalid token"
-            kick_player "Bad code! Check your verification address on minefold.com"
-          end
-        end
-      end
-    end
-
-    def authenticate_player *a, &b
-      cb = EM::Callback *a, &b
-
-      if username.strip.downcase != 'player'
-        cb.call :success
-      else
-        cb.call :invalid_player
-      end
-
-
-      # connection_hash = rand(36 ** 10).to_s(16)
-      #       redis.publish "players:authenticate:#{username}", connection_hash
-      #       timer = EM.periodic_with_timeout(0.5, 15)
-      #       timer.timeout do
-      #         cb.call :invalid_player
-      #       end
-      #       timer.callback do |timer|
-      #         url = "http://session.minecraft.net/game/checkserver.jsp?user=#{username}&serverId=#{connection_hash}"
-      #         p url
-      #         http = EventMachine::HttpRequest.new(url).get
-      #         http.callback do
-      #           if http.response.strip == 'YES'
-      #             p http.response
-      #             timer.cancel
-      #             cb.call :success
-      #           end
-      #         end
-      #       end
-      cb
-    end
-
-    def connect_unvalidated_player_to_unknown_world player, world
-      if world
-        debug "world:#{world.id} found"
-        connect_unvalidated_player_to_world player, world
-      else
-        debug "world not found"
-        reject_player username, :unknown_world
-      end
-    end
-
-    def current_players world_id, *a, &b
-      cb = EM::Callback(*a, &b)
-      op = redis.hgetall "players:playing"
-      op.callback do |players|
-        player_ids = players.select {|player_id, player_world_id| player_world_id == world_id.to_s }.keys.map{|id| BSON::ObjectId(id) }
-        debug "players online:#{player_ids.join(',')}"
-
-        cb.call player_ids
-      end
-      cb
-    end
-
-    def current_ops world, *a, &b
-      cb = EM::Callback *a, &b
-      current_players(world.id) do |player_ids|
-        op_ids = world.opped_player_ids & player_ids
-        debug "ops online:#{op_ids.join(',')}"
-        cb.call op_ids
-      end
-      cb
-    end
-
-    def request_whitelist_connect player, world, *a, &b
-      cb = EM::Callback *a, &b
-      current_ops(world) do |op_ids|
-        if op_ids.empty?
-          # no ops online? no whitelist
-          cb.call false
-        else
-          MinecraftPlayer.find_all({deleted_at: nil, _id: { '$in' => op_ids}}) do |ops|
-            debug "ops online:#{ops.map(&:username).join(',')}"
-            request_whitelist(world, player, ops) do |accepted|
-              cb.call accepted
+            else
+              kick_player '500'
             end
           end
-        end
-      end
-      cb
-    end
-
-    def request_whitelist world, player, ops, *a, &b
-      cb = EM::Callback *a, &b
-      redis.hget_json "worlds:running", world.id.to_s do |running_world|
-        if world and running_world
-          instance_id = running_world['instance_id']
-          ops.each do |op|
-            send_world_player_message instance_id, world.id, op.username, "#{username} wants to join!"
-            send_world_player_message instance_id, world.id, op.username, "/whitelist add #{username} to accept"
-          end
-          listen_once("worlds:#{world.id}:whitelist_change:#{player.id}") do |action|
-            cb.call action == 'added'
-          end
         else
-          warn "world not running?"
-          cb.call false
+          start_world player_id, server_id, funpack_id, settings
         end
       end
-      cb
     end
 
-    def connect_unvalidated_player_to_world player, world
-      if not player.has_credit?
-        no_credit_player_connecting
+    def start_world player_id, server_id, funpack_id, settings
+      debug "server:#{server_id} is not running"
+      redis.lpush_hash "worlds:requests:start",
+        server_id: server_id,
+        settings: settings,
+        funpack_id: funpack_id
 
-      elsif world.banned?(player)
-        debug "world:#{world.id} player:#{player.id} is banned"
-        reject_player username, :banned
-
-      elsif not (world.whitelisted?(player) or world.op?(player))
-        debug "world:#{world.id} player:#{player.id} is not whitelisted"
-
-        whitelist_timeout = EM.set_timeout(20) do
-          reject_player username, :not_whitelisted
-          cancel_listener "worlds:requests:whitelist_change:#{player.id}"
-        end
-
-        request_whitelist_connect player, world do |accepted|
-          whitelist_timeout.cancel
-
-          if accepted
-            debug "world:#{world.id} player:#{player.id} whitelist request accepted"
-            connect_player_to_world player, world
-          else
-            reject_player username, :not_whitelisted
-          end
-        end
-
-      else
-        debug "world:#{world.id} player:#{player.id} allowed to join"
-        connect_player_to_world player, world
-      end
-    end
-
-    def connect_player_to_world player, world
-      player_id, world_id = player.id.to_s, world.id.to_s
-
-      redis.lpush_hash "players:world_request",
-       username: username,
-       player_id: player_id,
-        world_id: world_id,
-        description: world.name
-    end
-
-    def unrecognised_player_connecting
-      info "unrecognised"
-      reject_player username, :unrecognised_player
-    end
-
-    def no_credit_player_connecting
-      info "user:#{username} has no credit"
-      reject_player username, :no_credit
-    end
-
-    # TODO: remove this method when we don't have "current worlds"
-    def connect_to_current_world player
-      if player.user
-        debug "found user:#{player.user.id} host:#{target_host}"
-        if player.user.current_world_id
-          World.find(player.user.current_world_id) {|world| connect_to_world player, world }
+      redis.sadd "servers:shared", server_id
+      listen_once_json "worlds:requests:start:#{server_id}" do |world|
+        if world['host']
+          connect_player_to_server player_id, server_id, world['host'], world['port']
         else
-          info "user has no current_world"
-          reject_player username, :no_world
+          kick_player world['failed']
         end
-      else
-        unrecognised_player_connecting
       end
     end
 
-    # TODO: remove this old school path
-    def connect_to_world player, world
-      if world
-        debug "world:#{world.id} found"
-        connect_unvalidated_player_to_current_world player, world
-      else
-        debug "old sk00l world not found"
-        reject_player username, :no_world
-      end
-    end
+    def connect_player_to_server player_id, server_id, host, port
+      info "connecting to #{host}:#{port}"
 
-    def connect_unvalidated_player_to_current_world player, world
-      if not player.has_credit?
-        no_credit_player_connecting
-      else
-        connect_player_to_world player, world
-      end
+      # this tells prism they can connect the player to the server
+      redis.publish_json "players:connection_request:#{username}",
+        host: host,
+        port: port,
+        player_id: player_id,
+        world_id: server_id
     end
   end
 end
