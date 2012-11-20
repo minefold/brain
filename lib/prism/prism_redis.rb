@@ -65,7 +65,7 @@ module Prism
 
       hset_hash "worlds:running", world_id, world_hash
       hdel "worlds:busy", world_id
-      publish_json "worlds:requests:start:#{world_id}", world_hash
+      publish_json "servers:requests:start:#{world_id}", world_hash
     end
 
     def unstore_running_world instance_id, world_id

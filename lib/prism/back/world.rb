@@ -1,54 +1,70 @@
-class World < Model
-  extend Prism::Mongo
+module Models
+  class World < Model
+    extend Prism::Mongo
 
-  collection :worlds
+    collection :worlds
 
-  DEFAULT_OPS = %W(chrislloyd whatupdave)
-
-  %w(name
-     slug
-     world_data_file
-     parent_id
-     opped_player_ids
-     whitelisted_player_ids
-     banned_player_ids
-     funpack
-     allocation_slots
-  ).each do |field|
-    define_method(:"#{field}") do
-      @doc[field]
-    end
-  end
-
-  def op? player
-    return true if DEFAULT_OPS.include? player.username
-
-    (opped_player_ids || []).include? player.id
-  end
-
-  def whitelisted? player
-    (whitelisted_player_ids || []).include? player.id
-  end
-
-  def banned? player
-    (banned_player_ids || []).include? player.id
-  end
-
-  def has_data_file? *a, &b
-    cb = EM::Callback *a, &b
-    if world_data_file.nil?
-      cb.call true
-    else
-      # TODO: world data_file's should include the full path world_id/world_id.tar.gz
-      EM.defer do
-        cb.call Storage.incremental_worlds.exists?("worlds/#{world_data_file}") ||
-          Storage.incremental_worlds.exists?("world-backups/#{world_data_file}") ||
-          Storage.worlds.exists?("#{world_data_file}") ||
-          Storage.worlds.exists?("#{id}/#{world_data_file}") ||
-          Storage.worlds.exists?("#{parent_id}/#{world_data_file}") ||
-          Storage.old_worlds.exists?(world_data_file)
+    %w(
+       created_at
+       updated_at
+       versions
+    ).each do |field|
+      define_method(:"#{field}") do
+        @doc[field]
       end
     end
-    cb
+  end
+
+  class Server < Model
+    extend Prism::Mongo
+
+    collection :servers
+
+    %w(
+       created_at
+       updated_at
+       allocation_slots
+       versions
+    ).each do |field|
+      define_method(:"#{field}") do
+        @doc[field]
+      end
+    end
+
+    def self.upsert id, *a, &b
+      cb = EM::Callback(*a, &b)
+
+      oid = BSON::ObjectId(id)
+      ts = Time.now
+
+      query = { _id: oid }
+
+      new_doc = {
+        created_at: ts,
+        updated_at: ts
+      }
+
+      existing_doc = {
+        '$set' => {
+          updated_at: ts,
+        }
+      }
+
+      find_one(query) do |model|
+        new_record = model.nil?
+        properties = new_record ? new_doc : existing_doc
+
+        find_and_modify(
+          query: query,
+          update: properties,
+          upsert: true,
+          new: true
+        ) do |model|
+          cb.call model, new_record
+        end
+      end
+
+      cb
+    end
   end
 end

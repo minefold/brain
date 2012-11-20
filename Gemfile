@@ -29,7 +29,6 @@ end
 group :test do
   # gem "autotest-fsevent"
   gem "autotest-growl"
-  gem 'foreman'
   gem 'launchy'
   gem 'rr', '~> 1.0.3'
   gem 'rspec'

@@ -34,6 +34,7 @@ module Prism
 
     subscription = PrismRedis.connect
     subscription.psubscribe "worlds:*"
+    subscription.psubscribe "servers:*"
     subscription.psubscribe "workers:*"
     subscription.on :pmessage do |key, channel, message|
       Prism::Messaging.deliver_message channel, message

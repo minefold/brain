@@ -11,8 +11,10 @@ module Prism
       end
     end
 
-    def listen_once_json channel, &blk
-      Prism::Messaging.registrations[channel][self] = proc {|message| blk.call JSON.parse(message) }
+    def listen_once_json channel, *a, &b
+      cb = EM::Callback *a, &b
+      Prism::Messaging.registrations[channel][self] = proc {|message| cb.call JSON.parse(message) }
+      cb
     end
 
     def listen_once channel, &blk

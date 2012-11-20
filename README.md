@@ -6,27 +6,45 @@
 
 ## API
 
-start_server
-  - id                    # if ommitted will create new server_id
-  - funpack_id
-  - world_id              # optional
-  - restart (bool)        # should the server restart if running
-  - settings
+    start_server
+      - id                    # if ommitted will create new server_id
+      - funpack_id
+      - world_id              # optional
+      - restart (bool)        # should the server restart if running
+      - settings
 
-  # returns
-  - id
+      # returns
+      - id
 
-stop_server
-  - id
+    stop_server
+      - id
 
-import_world
-  - url
+    import_world
+      - url
+  
+## Database
+
+    servers
+      created_at
+      updated_at
+      deleted_at
+      
+    worlds
+      created_at
+      updated_at
+      deleted_at
+      
+      versions [
+        created_at
+        url
+      ]
+      
 
 ## Callbacks
 
-server_started
-  - id
-  - host
+    server_started
+      - id
+      - host
 
 ## Redis keys
 
@@ -45,10 +63,6 @@ server_started
       LIST pinky:#{pinky_id}:in
 
 
-## TODO
-
-Auth/user accounts. Currently the only user is Minefold
-
 ## Usage
 
     foreman start
@@ -63,3 +77,13 @@ Auth/user accounts. Currently the only user is Minefold
 
     BRAIN_ENV (staging|production)
     BRAIN_ROOT
+    
+## Prism workflow
+* Player connects to prism (username, target_host)
+* load server from Minefold Db
+* 
+
+
+## TODO
+
+Auth/user accounts. Currently the only user is Minefold

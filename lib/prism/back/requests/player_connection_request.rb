@@ -1,7 +1,4 @@
-require 'eventmachine/periodic_timer_with_timeout'
-require 'eventmachine/cancellable_timeout'
-
-# TODO this logic belongs in Minefold, not the Partycloud
+# TODO this logic belongs in Minefold, not the Party Cloud
 
 module Prism
   class PlayerConnectionRequest < Request
@@ -25,23 +22,33 @@ module Prism
       (whitelist.split("\n") + ops.split("\n")).include?(username)
     end
 
+    def pg
+      $pg ||= if ENV['DATABASE_URL']
+        url = URI.parse(ENV['DATABASE_URL'] || 'postgres://localhost/minefold_development')
+        PG::Connection.new(
+          host:     url.host,
+          port:     url.port,
+          user:     url.user,
+          password: url.password,
+          dbname:   url.path[1..-1]
+        )
+      else
+        PG::Connection.new(
+          host: 'localhost',
+          dbname: 'minefold_development'
+        )
+      end
+    end
+
     def run
       debug "processing #{username} #{target_host}"
-
-      url = URI.parse(ENV['DATABASE_URL'])
-      $pg = PG::Connection.new(
-        host: url.host,
-        port: url.port,
-        user: url.user,
-        password: url.password,
-        dbname:url.path[1..-1]
-      )
 
       host = target_host.split(':')[0]
 
       EM.defer(proc {
-        servers = $pg.query(%Q{
-            select servers.party_cloud_id,
+        servers = pg.query(%Q{
+            select servers.id,
+                   servers.party_cloud_id,
                    servers.settings,
                    funpacks.party_cloud_id,
                    worlds.party_cloud_id
@@ -54,7 +61,7 @@ module Prism
             limit 1
           }, [host])
 
-        players = $pg.query(%Q{
+        players = pg.query(%Q{
             select players.id, users.credits from players
               inner join users on users.id = players.user_id
             where players.game_id=$1
@@ -73,11 +80,13 @@ module Prism
           kick_player "No server found, visit minefold.com"
 
         else
-          server_id = servers.getvalue(0,0)
-          settings = JSON.load(servers.getvalue(0,1))
-          funpack_id = servers.getvalue(0,2)
-          
-          player_id = players.getvalue(0,0)
+          # if this server hasn't run before, server_id will be nil
+          @server_id = servers.getvalue(0,0)
+          server_pc_id = servers.getvalue(0,1)
+          settings = JSON.load(servers.getvalue(0,2))
+          funpack_pc_id = servers.getvalue(0,3)
+
+          @player_id = players.getvalue(0,0)
           credits = players.getvalue(0,1).to_i
 
           if credits <= 0
@@ -87,54 +96,52 @@ module Prism
             kick_player 'You are not white-listed on this server. Visit minefold.com'
 
           else
-            player_allowed_to_connect player_id, server_id, funpack_id, settings
+            start_world server_pc_id, funpack_pc_id, settings
           end
         end
       })
     end
 
-    def player_allowed_to_connect player_id, server_id, funpack_id, settings
-      redis.get "server:#{server_id}:state" do |state|
-        if state == 'up'
-          redis.keys("pinky:*:servers:#{server_id}") do |keys|
-            if key = keys.first
-              pinky_id = key.split(':')[1]
-              redis.get_json("box:#{pinky_id}") do |pinky|
-                redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
-                  connect_player_to_server player_id, server_id, pinky['ip'], ps['port']
-                end
-              end
-            else
-              kick_player '500'
-            end
-          end
-        else
-          start_world player_id, server_id, funpack_id, settings
-        end
-      end
+    def start_world server_pc_id, funpack_pc_id, settings
+      # if server_pc_id is nil, use a generated reply key until we have a real
+      # server_pc_id
+      reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")
+
+      redis.lpush_hash "servers:requests:start",
+        server_id: server_pc_id,
+        settings: settings,
+        funpack_id: funpack_pc_id,
+        reply_key: reply_key
+
+      listen_once_json "servers:requests:start:#{reply_key}", method(:reply_handler)
     end
 
-    def start_world player_id, server_id, funpack_id, settings
-      debug "server:#{server_id} is not running"
-      redis.lpush_hash "worlds:requests:start",
-        server_id: server_id,
-        settings: settings,
-        funpack_id: funpack_id
+    def reply_handler reply
+      if reply['server_id']
+        pg.exec('update servers set party_cloud_id=$1 where id=$2', [reply['server_id'], @server_id])
+      end
 
-      redis.sadd "servers:shared", server_id
-      listen_once_json "worlds:requests:start:#{server_id}" do |world|
-        if world['host']
-          connect_player_to_server player_id, server_id, world['host'], world['port']
-        else
-          kick_player world['failed']
+      case reply['state']
+      when 'starting'
+        # start listening on the real server_id rather than generated reply key
+        EM.next_tick do
+          listen_once_json "servers:requests:start:#{reply['server_id']}", method(:reply_handler)
         end
+
+      when 'started'
+        redis.sadd 'servers:shared', reply['server_id']
+        connect_player_to_server @player_id, reply['server_id'], reply['host'], reply['port']
+
+      else
+        kick_player reply['failed']
+
       end
     end
 
     def connect_player_to_server player_id, server_id, host, port
       info "connecting to #{host}:#{port}"
 
-      # this tells prism they can connect the player to the server
+      # this tells prism to connect the player to the server
       redis.publish_json "players:connection_request:#{username}",
         host: host,
         port: port,
