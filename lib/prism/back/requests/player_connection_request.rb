@@ -119,6 +119,7 @@ module Prism
     def reply_handler reply
       if reply['server_id']
         pg.exec('update servers set party_cloud_id=$1 where id=$2', [reply['server_id'], @server_id])
+        redis.sadd 'servers:shared', reply['server_id']
       end
 
       case reply['state']
@@ -129,7 +130,6 @@ module Prism
         end
 
       when 'started'
-        redis.sadd 'servers:shared', reply['server_id']
         connect_player_to_server @player_id, reply['server_id'], reply['host'], reply['port']
 
       else
