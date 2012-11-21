@@ -16,8 +16,8 @@ module Prism
     end
 
     def run
-      if server_id.nil?
-        start_world
+      if server_id.nil? or funpack_id.nil?
+        reply 'failed', reason: 'invalid args'
       else
         redis.get "server:#{server_id}:state" do |state|
           case state
@@ -98,7 +98,7 @@ module Prism
           'settings' => settings
         )
 
-        if server_id.nil?
+        if snapshot_id.nil?
           start_server start_options
         else
           Models::Snapshot.find(snapshot_id) do |snapshot|

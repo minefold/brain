@@ -1,3 +1,5 @@
+require 'prism/prism_mongo'
+
 class Model
   extend Prism::Mongo
 
@@ -79,3 +81,8 @@ class Model
     @doc['_id']
   end
 end
+
+# require 'models/session'
+# require 'models/user'
+require 'models/server'
+require 'models/snapshot'

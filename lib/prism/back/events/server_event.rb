@@ -5,8 +5,8 @@ module Prism
 
     process "server:events", :pinky_id, :server_id, :server_ts, :type, :msg, :level, :snapshot_id, :url
 
-    log_tags :server_id, :player_id, :username
-    
+    log_tags :server_id
+
     def log
       @log ||= Brain::Logger.new
     end
@@ -25,6 +25,9 @@ module Prism
       when 'started'
         started
 
+      when 'stopped'
+        stopped
+
       when 'backed_up'
         backed_up
       end
@@ -37,8 +40,17 @@ module Prism
             host: pinky['ip'],
             port: ps['port']
 
+          Resque.push 'high', class: 'ServerStartedJob', args: [
+            server_id.to_s,
+            pinky['ip'],
+            ps['port']
+          ]
         end
       end
+    end
+
+    def stopped
+      Resque.push 'high', class: 'ServerStoppedJob', args: [server_id]
     end
 
     def backed_up
@@ -48,6 +60,11 @@ module Prism
         server_ts: server_ts,
         snapshot_id: snapshot_id,
         url: url
+      Resque.push 'high', class: 'ServerBackedUpJob', args: [
+        server_id,
+        snapshot_id,
+        url
+      ]
     end
   end
 end

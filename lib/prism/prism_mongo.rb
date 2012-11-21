@@ -1,3 +1,5 @@
+require 'logging'
+
 module Prism
   module Mongo
     extend Logging
