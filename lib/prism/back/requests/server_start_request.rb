@@ -3,9 +3,9 @@ module Prism
     include Logging
     include Messaging
 
-    process "servers:requests:start", :server_id, :world_id, :settings, :funpack_id, :player_slots, :reply_key
+    process "servers:requests:start", :server_id, :settings, :funpack_id, :player_slots, :reply_key
 
-    attr_reader :server_id, :world_id, :settings, :funpack_id
+    attr_reader :server_id, :server_id, :settings, :funpack_id
 
     log_tags :server_id
 
@@ -69,7 +69,7 @@ module Prism
           start_options = allocator.start_options_for_new_world(slots_required)
 
           if start_options and start_options[:pinky_id]
-            start_with_settings start_options
+            start_with_settings server.snapshot_id, start_options
 
           else
             reply 'failed', reason: 'no_instances_available'
@@ -78,7 +78,7 @@ module Prism
       end
     end
 
-    def start_with_settings start_options
+    def start_with_settings snapshot_id, start_options
       # TODO store in database
       funpacks = {
         '50a976ec7aae5741bb000001' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
@@ -98,12 +98,12 @@ module Prism
           'settings' => settings
         )
 
-        if world_id.nil?
+        if server_id.nil?
           start_server start_options
         else
-          Models::World.find(world_id) do |world|
-            if world and world.versions.any?
-              start_options['world'] = world.versions.sort_by{|v| v['created_at']}.last
+          Models::Snapshot.find(snapshot_id) do |snapshot|
+            if snapshot
+              start_options['worldUrl'] = snapshot.url
             end
 
             start_server start_options

@@ -1,13 +1,12 @@
 module Models
-  class World < Model
+  class Snapshot < Model
     extend Prism::Mongo
 
-    collection :worlds
+    collection :snapshots
 
     %w(
        created_at
-       updated_at
-       versions
+       url
     ).each do |field|
       define_method(:"#{field}") do
         @doc[field]
@@ -25,6 +24,7 @@ module Models
        updated_at
        allocation_slots
        versions
+       snapshot_id
     ).each do |field|
       define_method(:"#{field}") do
         @doc[field]

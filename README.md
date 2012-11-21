@@ -7,10 +7,10 @@
 ## API
 
     start_server
-      - id                    # if ommitted will create new server_id
+      - id              # if ommitted will create new server_id
       - funpack_id
-      - world_id              # optional
-      - restart (bool)        # should the server restart if running
+      - snapshot_id     # optional (will use last snapshot if left out)
+      - restart (bool)  # should the server restart if running
       - settings
 
       # returns
