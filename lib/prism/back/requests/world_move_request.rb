@@ -32,8 +32,7 @@ module Prism
       EM.add_timer(2) do
         send_world_message @instance_id, world_id, "Please reconnect in 30 seconds"
         EM.add_timer(8) do
-          op = redis.hgetall "players:playing"
-          op.callback do |players|
+          redis.hgetall "players:playing" do |players|
             users = players.select{|username, player_world_id| player_world_id == world_id }.keys
             users.each do |username|
               redis.publish "players:disconnect:#{username}", "Please reconnect in 30 seconds"

@@ -3,7 +3,7 @@ module Prism
     include ChatMessaging
     include Logging
 
-    process "server:events", :pinky_id, :server_id, :server_ts, :type, :msg, :level, :snapshot_id, :url
+    process "server:events", :pinky_id, :server_id, :ts, :type, :msg, :level, :snapshot_id, :url
 
     log_tags :server_id
 
@@ -16,7 +16,7 @@ module Prism
         log.info event: 'server_event',
           pinky_id: pinky_id,
           server_id: server_id,
-          server_ts: server_ts,
+          server_ts: ts,
           type: type,
           msg: msg
       end
@@ -30,6 +30,9 @@ module Prism
 
       when 'backed_up'
         backed_up
+
+      when 'minute'
+        minute
       end
     end
 
@@ -54,17 +57,36 @@ module Prism
     end
 
     def backed_up
-      log.info event: 'backup',
-        pinky_id: pinky_id,
-        server_id: server_id,
-        server_ts: server_ts,
-        snapshot_id: snapshot_id,
-        url: url
       Resque.push 'high', class: 'ServerBackedUpJob', args: [
         server_id,
         snapshot_id,
         url
       ]
+    end
+
+    def minute
+      # TODO this logic belongs in Minefold, not Party Cloud
+
+      timestamp = Time.parse(ts).to_i
+      redis.sismember('servers:shared', server_id) do |shared_server|
+        if shared_server == 0
+          Resque.push 'high',
+            class: 'NormalServerTickedJob', args: [server_id, timestamp]
+
+        else
+          redis.hgetall("players:playing") do |players|
+            player_ids = players.select {|player_id, player_server_id|
+              player_server_id == server_id
+            }.keys
+            
+          Resque.push 'high',
+            class: 'SharedServerTickedJob', args: [
+              server_id, player_ids, timestamp
+            ]
+          end
+
+        end
+      end
     end
   end
 end

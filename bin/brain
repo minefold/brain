@@ -5,7 +5,6 @@ Bundler.require :default, :proxy
 
 $:.unshift File.join File.dirname(__FILE__), '../lib'
 require 'brain'
-require 'minefold'
 require 'prism/back'
 
 STDOUT.sync = true
@@ -50,7 +49,7 @@ module Prism
         QueueProcessor.new klass
     end
 
-    puts "Started. #{Fold.env} mode"
+    puts "Started. #{Brain.env} mode"
 
   end
 end

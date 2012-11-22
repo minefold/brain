@@ -94,13 +94,13 @@ module Prism
       df
     end
 
-    def hgetall key
-      df = EM::DefaultDeferrable.new
+    def hgetall key, *a, &b
+      cb = EM::Callback(*a, &b)
 
       op = redis.hgetall key
-      op.callback {|data| df.succeed data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = w[1] } }
-      op.errback  { df.errback }
-      df
+      op.callback {|data| cb.call data.each_slice(2).each_with_object({}) {|w, hash| hash[w[0]] = w[1] } }
+      op.errback {|e| handle_error e }
+      cb
     end
 
     def hset_hash channel, key, value
