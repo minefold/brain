@@ -24,7 +24,7 @@ module Prism
 
     def pg
       $pg ||= if ENV['DATABASE_URL']
-        url = URI.parse(ENV['DATABASE_URL'] || 'postgres://localhost/minefold_development')
+        url = URI.parse(ENV['DATABASE_URL'])
         PG::Connection.new(
           host:     url.host,
           port:     url.port,

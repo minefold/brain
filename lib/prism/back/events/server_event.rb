@@ -33,6 +33,9 @@ module Prism
 
       when 'minute'
         minute
+
+      when 'fatal_error'
+        fatal_error
       end
     end
 
@@ -40,6 +43,7 @@ module Prism
       redis.get_json("box:#{pinky_id}") do |pinky|
         redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
           redis.publish_json "servers:requests:start:#{server_id}",
+            state: 'started',
             host: pinky['ip'],
             port: ps['port']
 
@@ -74,19 +78,36 @@ module Prism
             class: 'NormalServerTickedJob', args: [server_id, timestamp]
 
         else
-          redis.hgetall("players:playing") do |players|
-            player_ids = players.select {|player_id, player_server_id|
-              player_server_id == server_id
-            }.keys
-            
-          Resque.push 'high',
-            class: 'SharedServerTickedJob', args: [
-              server_id, player_ids, timestamp
-            ]
+          connected_player_ids(server_id) do |player_ids|
+            Resque.push 'high',
+              class: 'SharedServerTickedJob', args: [
+                server_id, player_ids, timestamp
+              ]
           end
-
         end
       end
+    end
+    
+    def fatal_error
+      # TODO this logic belongs in Minefold, not Party Cloud
+      redis.get "server:#{server_id}:state" do |state|
+        puts "SERVER STATE: #{state}"
+      end
+
+      redis.publish "servers:requests:start:#{server_id}",
+        JSON.dump(failed: 'server error')
+    end
+
+    # TODO this logic belongs in Minefold, not Party Cloud
+    def connected_player_ids(server_id, *a, &b)
+      cb = EM::Callback(*a, &b)
+      redis.hgetall("players:playing") do |players|
+        player_ids = players.select {|player_id, player_server_id|
+          player_server_id == server_id
+        }.keys
+        cb.call player_ids
+      end
+      cb
     end
   end
 end
