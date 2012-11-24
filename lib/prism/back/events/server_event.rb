@@ -57,6 +57,7 @@ module Prism
     end
 
     def stopped
+      redis.publish_json "servers:requests:stop:#{server_id}", {}
       Resque.push 'high', class: 'ServerStoppedJob', args: [server_id]
     end
 

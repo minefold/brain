@@ -41,8 +41,6 @@ module Prism
 
     [ PlayerConnectionRequest,
       ServerEvent,
-      WorkerStopRequest,
-      WorkerCreateRequest,
       ServerStartRequest,
       ServerStopRequest,
       WorldMoveRequest ].each do |klass|
