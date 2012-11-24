@@ -31,7 +31,7 @@ class BoxType
 
   def server_slots
     [(allocated_ram_mb / RAM_MB_PER_SLOT).floor,
-     (box.type.ecus / ECUS_PER_SLOT).floor].min
+     (ecus / ECUS_PER_SLOT).floor].min
   end
 
   def allocated_ram_mb
