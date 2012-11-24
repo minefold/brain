@@ -22,9 +22,9 @@ module Prism
           @callback.call item
         end
 
-        EM.add_timer(0.5) { listen }
+        EM.next_tick { listen }
       end
-      @pop.errback { EM.add_timer(0.5) { listen } }
+      @pop.errback { EM.next_tick { listen } }
     end
   end
 
