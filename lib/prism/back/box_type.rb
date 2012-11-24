@@ -1,12 +1,12 @@
 class BoxType
-  attr_reader :id, :ram, :ecus, :ami
+  attr_reader :id, :ram_mb, :ecus, :ami
 
     RAM_ALLOCATION = 0.9 # we'll allocate this much % ram
     RAM_PER_PLAYER = 128
-    ECUS_PER_SERVER = 1.5
+    ECUS_PER_SLOT = (ENV['ECUS_PER_SLOT'] || 1)
+    RAM_MB_PER_SLOT = (ENV['RAM_MB_PER_SLOT'] || 512)
 
     INSTANCE_PLAYER_BUFFER = 5 # needs to be space for 5 players to start a world on a box
-    WORLD_BUFFER = 3  # there must be room for 3 more slots at any time
 
     AMIS = {
       '64bit' => 'ami-1176c278',
@@ -25,24 +25,25 @@ class BoxType
     definitions.find{|box_type| box_type.id == id }
   end
 
-  def initialize id, ram, ecus, ami
-    @id, @ram, @ecus, @ami = id, ram, ecus, ami
+  def initialize id, ram_mb, ecus, ami
+    @id, @ram_mb, @ecus, @ami = id, ram_mb, ecus, ami
   end
 
   def server_slots
-    (ecus / ECUS_PER_SERVER).round
+    [(allocated_ram_mb / RAM_MB_PER_SLOT).floor,
+     (box.type.ecus / ECUS_PER_SLOT).floor].min
   end
 
-  def allocated_ram
-    (ram * RAM_ALLOCATION)
+  def allocated_ram_mb
+    (ram_mb * RAM_ALLOCATION)
   end
 
   def slot_size_mb
-    (allocated_ram / server_slots).round
+    (allocated_ram_mb / server_slots).round
   end
 
   def player_slots
-    (allocated_ram / RAM_PER_PLAYER).round
+    (allocated_ram_mb / RAM_PER_PLAYER).round
   end
 
   def players_per_slot

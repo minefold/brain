@@ -45,7 +45,7 @@ module Brain
         ![:ts, :level, :event].include?(k)
       }.map{|k,v| "#{k}=#{quote_unspaced v}"}.sort
     
-      msg = "#{data[:ts]} [#{data[:level]}] #{data[:event]} #{attrs.join(' ')}"
+      msg = "[#{data[:level]}] #{data[:event]} #{attrs.join(' ')}"
     
       case data[:level]
       when 'warn'
