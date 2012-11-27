@@ -18,12 +18,16 @@ Bugsnag.configure do |config|
   config.use_ssl = true
 end
 
-Librato::Metrics.authenticate ENV['LIBRATO_EMAIL'], ENV['LIBRATO_API_TOKEN']
+$metrics = false
+if ENV['LIBRATO_EMAIL'] and ENV['LIBRATO_API_TOKEN']
+  $metrics = true
+  Librato::Metrics.authenticate ENV['LIBRATO_EMAIL'], ENV['LIBRATO_API_TOKEN']
+end
 
 module Prism
   EM.run do
     EM.error_handler do |e|
-      Exceptional.handle(e)
+      Bugsnag.notify(e)
       raise e
     end
 

@@ -13,8 +13,6 @@ gem 'bson_ext'
 gem "hiredis", "~> 0.4.0"
 gem "redis", ">= 2.2.0", :require => ["redis/connection/hiredis", "redis"]
 gem 'em-hiredis', '~> 0.1.1'
-gem 'hirb'
-gem 'exceptional'
 gem 'colored'
 gem 'uuid'
 gem 'bugsnag'

@@ -62,7 +62,7 @@ module Prism
           }, [host])
 
         players = pg.query(%Q{
-            select players.id, users.credits from players
+            select players.id, users.coins from players
               inner join users on users.id = players.user_id
             where players.game_id=$1
               and players.uid=$2
@@ -87,10 +87,10 @@ module Prism
           funpack_pc_id = servers.getvalue(0,3)
 
           @player_id = players.getvalue(0,0)
-          credits = players.getvalue(0,1).to_i
+          coins = players.getvalue(0,1).to_i
 
-          if credits <= 0
-            kick_player 'No credits. Buy more at minefold.com'
+          if coins <= 0
+            kick_player 'No coins. Buy more at minefold.com'
 
           elsif !whitelisted?(username, settings)
             kick_player 'You are not white-listed on this server. Visit minefold.com'

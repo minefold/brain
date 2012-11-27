@@ -18,7 +18,9 @@ def start_server server_id
   puts "starting #{server_id}"
   $redis.lpush "servers:requests:start", JSON.dump(
     server_id: server_id,
-    settings: {},
+    settings: {
+      ops: 'whatupdave'
+    },
     funpack_id: '50a976ec7aae5741bb000001',
     reply_key: server_id
   )

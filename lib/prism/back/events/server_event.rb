@@ -3,7 +3,7 @@ module Prism
     include ChatMessaging
     include Logging
 
-    process "server:events", :pinky_id, :server_id, :ts, :type, :msg, :level, :snapshot_id, :url, :username, :usernames
+    process "server:events", :pinky_id, :server_id, :ts, :type, :msg, :level, :snapshot_id, :url, :username, :usernames, :actor, :key, :value
 
     log_tags :server_id
 
@@ -40,6 +40,9 @@ module Prism
         player_disconnected
       when 'players_listed'
         players_listed
+
+      when 'settings_changed'
+        settings_changed
 
       when 'fatal_error'
         fatal_error
@@ -112,6 +115,16 @@ module Prism
       record_player_metrics
     end
 
+    def settings_changed
+      Resque.push 'high',
+        class: 'ServerSettingsChangedJob',
+         args: [server_id, {
+           setting: key,
+           value: value,
+           actor: actor
+         }]
+    end
+
     def fatal_error
       # TODO this logic belongs in Minefold, not Party Cloud
       redis.get "server:#{server_id}:state" do |state|
@@ -135,6 +148,8 @@ module Prism
     end
 
     def record_player_metrics
+      return unless $metrics
+
       redis.keys 'server:*:players' do |keys|
         EM::Iterator.new(keys, 10).inject(0, proc{|count, key, iter|
           op = redis.scard(key)

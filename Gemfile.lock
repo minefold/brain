@@ -38,8 +38,6 @@ GEM
     em-socksify (0.2.1)
       eventmachine (>= 1.0.0.beta.4)
     eventmachine (1.0.0.beta.4)
-    exceptional (2.0.33)
-      rack
     excon (0.12.0)
     fakeredis (0.4.1)
       redis (~> 3.0.0)
@@ -56,7 +54,6 @@ GEM
       nokogiri (~> 1.5.0)
       ruby-hmac
     formatador (0.2.4)
-    hirb (0.7.0)
     hiredis (0.4.5)
     http_parser.rb (0.5.3)
     httparty (0.9.0)
@@ -136,10 +133,8 @@ DEPENDENCIES
   em-http-request
   em-spec!
   eventmachine (= 1.0.0.beta.4)
-  exceptional
   fakeredis
   fog (~> 1.2.0)
-  hirb
   hiredis (~> 0.4.0)
   launchy
   librato-metrics
