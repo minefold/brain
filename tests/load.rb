@@ -62,17 +62,12 @@ Thread.new do
   end
 end
 
-num_servers = count_state('up')
+$num_servers = count_state('up')
 puts "starting: #{count_state('starting')}  up: #{count_state('up')}"
 
-while true
-  num_servers = count_state('up')
-
-  print "> "
-  target_servers = gets.to_i
-
-  if target_servers > num_servers
-    (target_servers - num_servers).times do
+def change_servers target_servers
+  if target_servers > $num_servers
+    (target_servers - $num_servers).times do
       start_server BSON::ObjectId.new.to_s
       sleep 1
     end
@@ -84,16 +79,45 @@ while true
     end
 
   else
-    stop_count = num_servers - target_servers
+    stop_count = $num_servers - target_servers
     Hash[in_state('up').take(stop_count)].each do |server_id, _|
       stop_server server_id
       sleep 1
     end
 
-    up = num_servers
+    up = $num_servers
     while up > target_servers
       sleep 1
       up = count_state('up')
     end
+  end
+end
+
+def change_players server_id, count
+  $redis.del "server:#{server_id}:players"
+  $redis.sadd "server:#{server_id}:players", count.times.to_a
+end
+
+def reallocate_server server_id, slots
+  $redis.lpush 'servers:reallocate_request', JSON.dump(
+    server_id: server_id,
+    slots: slots
+  )
+end
+
+while true
+  num_servers = count_state('up')
+
+  print "> "
+  command = gets
+
+  if command =~ /s (\d+)/
+    change_servers $1.to_i
+
+  elsif command =~ /p ([\d\w]+) (\d+)/
+    change_players $1, $2.to_i
+
+  elsif command =~ /r ([\d\w]+) (\d+)/
+    reallocate_server $1, $2.to_i
   end
 end

@@ -52,6 +52,12 @@ module Prism
     def started
       redis.get_json("box:#{pinky_id}") do |pinky|
         redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
+          redis.del("server:#{server_id}:restart") do |restarted|
+            if restarted > 0
+              log.info event: 'restarted_server', server_id: server_id
+            end
+          end
+
           redis.publish_json "servers:requests:start:#{server_id}",
             state: 'started',
             host: pinky['ip'],
@@ -67,8 +73,16 @@ module Prism
     end
 
     def stopped
-      redis.publish_json "servers:requests:stop:#{server_id}", {}
-      Resque.push 'high', class: 'ServerStoppedJob', args: [server_id]
+      redis.get "server:#{server_id}:restart" do |restart|
+        puts "STOPPED. RESTART: #{restart}"
+        if restart
+          log.info event: 'restarting_server', server_id: server_id
+          redis.lpush_hash "servers:requests:start", server_id: server_id
+        else
+          redis.publish_json "servers:requests:stop:#{server_id}", {}
+          Resque.push 'high', class: 'ServerStoppedJob', args: [server_id]
+        end
+      end
     end
 
     def backed_up

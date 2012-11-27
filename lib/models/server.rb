@@ -7,7 +7,9 @@ module Models
     %w(
        created_at
        updated_at
-       allocation_slots
+       slots
+       funpack_id
+       settings
        versions
        snapshot_id
     ).each do |field|
@@ -16,36 +18,39 @@ module Models
       end
     end
 
-    def self.upsert id, *a, &b
+    def self.upsert id, funpack_id, settings, *a, &b
       cb = EM::Callback(*a, &b)
 
-      oid = BSON::ObjectId(id)
       ts = Time.now
+      
+      query = {_id: BSON::ObjectId(id)}
 
-      query = { _id: oid }
-
-      new_doc = {
-        created_at: ts,
-        updated_at: ts
-      }
-
-      existing_doc = {
-        '$set' => {
-          updated_at: ts,
-        }
+      upserted = proc {
+        find_one(query) do |model|
+          cb.call model
+        end
       }
 
       find_one(query) do |model|
-        new_record = model.nil?
-        properties = new_record ? new_doc : existing_doc
+        if model.nil?
+          insert({
+            _id: BSON::ObjectId(id),
+            created_at: ts,
+            updated_at: ts,
+            funpack_id: funpack_id,
+            settings: settings
+          }, upserted)
+        else
+          doc = {
+            '$set' => {
+              updated_at: ts
+            }
+          }
 
-        find_and_modify(
-          query: query,
-          update: properties,
-          upsert: true,
-          new: true
-        ) do |model|
-          cb.call model, new_record
+          doc['$set'].merge!(funpack_id: funpack_id) if funpack_id
+          doc['$set'].merge!(setttings: settings) if settings
+
+          update(query, doc, upserted)
         end
       end
 

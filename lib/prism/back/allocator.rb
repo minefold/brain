@@ -16,11 +16,9 @@ module Prism
       @log = Brain::Logger.new
     end
 
-    def start_options_for_new_world(players_required)
-      players_required = [4, (players_required || 4)].max
-
-      if pinky = find_pinky_for_new_world(players_required)
-        ram_required = pinky[:slots_required] * RAM_MB_PER_SLOT
+    def start_options_for_new_server(slots)
+      if pinky = find_pinky_for_new_world(slots)
+        ram_required = slots * RAM_MB_PER_SLOT
 
         start_options = {
           pinky_id: pinky[:id],
@@ -30,16 +28,16 @@ module Prism
       end
     end
 
-    def find_pinky_for_new_world(players_required)
+    def find_pinky_for_new_world(slots_required)
       # use the bigger instance types first,
       # then use the instance with the least available slots
 
-      candidates = pinky_allocations(players_required).select {|pinky|
+      candidates = pinky_allocations.select {|pinky|
 
         log.info(pinky.merge(event: 'candidate'))
 
         pinky[:state] == 'up' and
-          pinky[:slots_required] <= pinky[:slots_available]
+          slots_required <= pinky[:slots_available]
 
       }.sort_by{|pinky| -pinky[:total_slots] }.
         sort_by{|pinky| pinky[:slots_available] }
@@ -47,16 +45,13 @@ module Prism
       candidates.first if candidates.any?
     end
 
-    def pinky_allocations(players_required)
+    def pinky_allocations
       @pinkies.map do |pinky|
         {
           id: pinky.id,
           state: pinky.state,
           total_slots: server_slots(pinky.box_type),
-          slots_available: server_slots_available(pinky),
-          slots_required: (
-            players_required.to_f / players_per_slot(pinky)
-          ).ceil
+          slots_available: server_slots_available(pinky)
         }
       end
     end

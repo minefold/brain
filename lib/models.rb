@@ -42,16 +42,24 @@ class Model
     cb
   end
 
-  def self.insert document, options = {}
-    EM.defer do
-      mongo_collection.insert document, options
-    end
+  def self.insert document, *a, &b
+    cb = EM::Callback(*a, &b)
+    EM.defer(proc{
+      mongo_collection.insert document
+    }, proc {|id|
+      cb.call id
+    })
+    cb
   end
 
-  def self.update selector, document, options = {}
-    EM.defer do
-      mongo_collection.update selector, document, options
-    end
+  def self.update selector, document, *a, &b
+    cb = EM::Callback(*a, &b)
+    EM.defer(proc{
+      mongo_collection.update selector, document
+    }, proc {
+      cb.call
+    })
+    cb
   end
 
   def self.find_and_modify options, *a, &b

@@ -33,7 +33,7 @@ module Prism
 
     # Pinkies.collect do |pinkies|
     #   allocator = Allocator.new(pinkies)
-    #   start_options = allocator.start_options_for_new_world(4)
+    #   start_options = allocator.start_options_for_new_server(4)
     #   p start_options
     # end
 
@@ -49,7 +49,7 @@ module Prism
       ServerEvent,
       ServerStartRequest,
       ServerStopRequest,
-      WorldMoveRequest ].each do |klass|
+      ServerReallocateRequest ].each do |klass|
         QueueProcessor.new klass
     end
 

@@ -3,7 +3,8 @@ module Prism
     include Logging
     include Messaging
 
-    process "servers:requests:start", :server_id, :settings, :funpack_id, :player_slots, :reply_key
+    process "servers:requests:start",
+      :server_id, :settings, :funpack_id, :reply_key
 
     attr_reader :server_id, :server_id, :settings, :funpack_id
 
@@ -16,13 +17,13 @@ module Prism
     end
 
     def run
-      if server_id.nil? or funpack_id.nil?
-        reply 'failed', reason: 'invalid args'
+      if server_id.nil?
+        reply 'failed', reason: 'server not found'
       else
         redis.get "server:#{server_id}:state" do |state|
           case state
           when 'up'
-            debug "world:#{server_id} is already running"
+            debug "server:#{server_id} is already running"
             redis.keys("pinky:*:servers:#{server_id}") do |keys|
               if key = keys.first
                 pinky_id = key.split(':')[1]
@@ -40,36 +41,38 @@ module Prism
             end
 
           when 'starting'
-            debug "world:#{server_id} start already requested"
+            debug "server:#{server_id} start already requested"
 
           when 'stopping'
-            # TODO
-            debug "world:#{server_id} is stopping. will request start when stopped"
+            debug "server:#{server_id} is stopping. will request start when stopped"
+            redis.set "server:#{server_id}:restart", 1
 
           else
-            debug "world:#{server_id} is not running"
-            start_world
+            debug "server:#{server_id} is not running"
+            find_and_start_server
           end
         end
       end
     end
 
-    def start_world
-      @server_id ||= BSON::ObjectId.new.to_s
-
+    def find_and_start_server
       redis.set "server:#{server_id}:state", "starting"
 
       reply 'starting', server_id: server_id
 
-      Models::Server.upsert(server_id) do |server|
-        slots_required = player_slots || server.allocation_slots || 1
+      Models::Server.upsert(server_id, funpack_id, settings) do |server|
+        p "3", server, "3"
+        slots_required = server.slots || 1
 
         Pinkies.collect do |pinkies|
           allocator = Allocator.new(pinkies)
-          start_options = allocator.start_options_for_new_world(slots_required)
+          start_options = allocator.start_options_for_new_server(slots_required)
 
           if start_options and start_options[:pinky_id]
-            start_with_settings server.snapshot_id, start_options
+            start_with_settings server.snapshot_id,
+              server.settings,
+              server.funpack_id,
+              start_options
 
           else
             reply 'failed', reason: 'no_instances_available'
@@ -78,7 +81,7 @@ module Prism
       end
     end
 
-    def start_with_settings snapshot_id, start_options
+    def start_with_settings snapshot_id, settings, funpack_id, start_options
       # TODO store in database
       funpacks = {
         '50a976ec7aae5741bb000001' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
@@ -89,7 +92,7 @@ module Prism
       funpack = funpacks[funpack_id]
 
       if funpack.nil?
-        reply 'failed', "No funpack found for #{funpack_id}"
+        reply 'failed', reason: "No funpack found for #{funpack_id}"
 
       else
         start_options.merge!(
@@ -115,7 +118,7 @@ module Prism
     def start_server start_options
       start_options['name'] = 'start'
       debug "start options: #{start_options}"
-      
+
       redis.set "server:#{server_id}:slots", start_options[:slots]
       redis.lpush_hash "pinky:#{start_options[:pinky_id]}:in", start_options
     end

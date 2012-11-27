@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+Bundler.require :default
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'brain'
+require 'prism/back'
+require 'pry'
+
+include Prism::Mongo
+
+$mongo = mongo_connect
+
+binding.pry
