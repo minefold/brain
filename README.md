@@ -53,7 +53,9 @@
     STRING box:#{box_id}
        SET servers
        SET servers:shared
-    STRING server:#{box_id}:state
+    STRING server:#{server_id}:state
+       SET server:#{server_id}:players
+    STRING server:#{server_id}:slots
       LIST server:events
        SET pinkies
     STRING pinky:#{pinky_id}:state
@@ -77,11 +79,43 @@
 
     BRAIN_ENV (staging|production)
     BRAIN_ROOT
-    
-## Prism workflow
-* Player connects to prism (username, target_host)
-* load server from Minefold Db
-* 
+
+## Server reallocation
+
+PartyUnit (PU):
+  - 1 ECU
+  - 512Mb RAM
+
+### Scenario
+brain allocates server with 1PU
+brain starts funpack with 512Mb ram
+
+funpack starts stressing
+brain monitors
+funpack stops stressing
+brain forgets
+
+funpack starts stressing
+brain monitors
+funpack still stressing after x minutes
+
+**Party Cloud friendly game:**
+
+brain ups allocation to 2PUs
+if brain finds room on same box
+  brain tells funpack to reallocate to 1024Mb
+  
+else
+  brain tells pc-router that host is switching
+  funpack detects change and messages connected clients to pause/buffer
+  funpack exits
+  brain starts funpack on new host
+  funpack connects to pc-router and reconnects players
+
+**non PC friendly game:**
+
+brain ups allocation to 2PUs
+
 
 
 ## TODO

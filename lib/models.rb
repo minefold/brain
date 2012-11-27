@@ -82,7 +82,5 @@ class Model
   end
 end
 
-# require 'models/session'
-# require 'models/user'
 require 'models/server'
 require 'models/snapshot'

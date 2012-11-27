@@ -21,6 +21,8 @@ gem 'bugsnag'
 gem 'pg'
 
 gem 'resque'
+gem 'librato-metrics', require: 'librato/metrics'
+gem 'yajl-ruby'
 
 group :development do
   gem 'pry'

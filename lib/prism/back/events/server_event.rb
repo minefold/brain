@@ -3,7 +3,7 @@ module Prism
     include ChatMessaging
     include Logging
 
-    process "server:events", :pinky_id, :server_id, :ts, :type, :msg, :level, :snapshot_id, :url
+    process "server:events", :pinky_id, :server_id, :ts, :type, :msg, :level, :snapshot_id, :url, :username, :usernames
 
     log_tags :server_id
 
@@ -33,6 +33,13 @@ module Prism
 
       when 'minute'
         minute
+
+      when 'player_connected'
+        player_connected
+      when 'player_disconnected'
+        player_disconnected
+      when 'players_listed'
+        players_listed
 
       when 'fatal_error'
         fatal_error
@@ -88,7 +95,23 @@ module Prism
         end
       end
     end
-    
+
+    def player_connected
+      redis.sadd "server:#{server_id}:players", username
+      record_player_metrics
+    end
+
+    def player_disconnected
+      redis.srem "server:#{server_id}:players", username
+      record_player_metrics
+    end
+
+    def players_listed
+      redis.del "server:#{server_id}:players"
+      redis.sadd "server:#{server_id}:players", usernames
+      record_player_metrics
+    end
+
     def fatal_error
       # TODO this logic belongs in Minefold, not Party Cloud
       redis.get "server:#{server_id}:state" do |state|
@@ -109,6 +132,25 @@ module Prism
         cb.call player_ids
       end
       cb
+    end
+
+    def record_player_metrics
+      redis.keys 'server:*:players' do |keys|
+        EM::Iterator.new(keys, 10).inject(0, proc{|count, key, iter|
+          op = redis.scard(key)
+          op.callback do |count|
+            iter.return(count)
+          end
+        }, proc{|count|
+          puts "players: #{count}"
+          Librato::Metrics.submit 'players.count' => {
+            :type => :gauge,
+            :value => count,
+            :source => 'party-cloud'
+          }
+        })
+      end
+
     end
   end
 end

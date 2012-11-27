@@ -113,14 +113,11 @@ module Prism
     end
 
     def start_server start_options
-      debug "start options: #{start_options}"
-
-      pinky_id = start_options[:pinky_id]
-      debug "starting world:#{server_id} on pinky:#{pinky_id} heap:#{start_options[:heap_size]}"
-
       start_options['name'] = 'start'
-
-      redis.lpush_hash "pinky:#{pinky_id}:in", start_options
+      debug "start options: #{start_options}"
+      
+      redis.set "server:#{server_id}:slots", start_options[:slots]
+      redis.lpush_hash "pinky:#{start_options[:pinky_id]}:in", start_options
     end
   end
 end

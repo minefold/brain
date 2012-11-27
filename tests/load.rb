@@ -1,5 +1,7 @@
-require 'bundler/setup'
-Bundler.require :default
+require 'uri'
+require 'redis'
+require 'bson'
+require 'json'
 
 def redis_connect
   uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
@@ -28,9 +30,18 @@ def stop_server server_id
 end
 
 $servers = {}
+keys = $redis.keys 'server:*:state'
+keys.each do |key|
+  server_id = key.split(':')[1]
+  $servers[server_id] = $redis.get(key)
+end
 
-def count_state(h, state)
-  h.inject(0){|count, (_, s)| count + (s == state ? 1 : 0) }
+def in_state(state)
+  $servers.select{|_, s| s == state}
+end
+
+def count_state(state)
+  in_state(state).size
 end
 
 Thread.abort_on_exception = true
@@ -41,17 +52,19 @@ Thread.new do
       server = JSON.load(msg)
       server_id = chan.split(':')[3]
 
-      $servers[server_id] = server['state']
-      starting = count_state($servers, 'starting')
-      started = count_state($servers, 'started')
+      $servers[server_id] =
+        (server['state'] == 'started' ? 'up' : server['state'])
 
-      puts "starting: #{starting}  up: #{started}"
+      puts "starting: #{count_state('starting')}  up: #{count_state('up')}"
     end
   end
 end
 
+num_servers = count_state('up')
+puts "starting: #{count_state('starting')}  up: #{count_state('up')}"
+
 while true
-  num_servers = count_state($servers, 'started')
+  num_servers = count_state('up')
 
   print "> "
   target_servers = gets.to_i
@@ -59,24 +72,26 @@ while true
   if target_servers > num_servers
     (target_servers - num_servers).times do
       start_server BSON::ObjectId.new.to_s
+      sleep 1
     end
 
-    started = 0
-    while started < target_servers
+    up = 0
+    while up < target_servers
       sleep 1
-      started = count_state($servers, 'started')
+      up = count_state('up')
     end
 
   else
     stop_count = num_servers - target_servers
-    Hash[$servers.take(stop_count)].each do |server_id, _|
+    Hash[in_state('up').take(stop_count)].each do |server_id, _|
       stop_server server_id
+      sleep 1
     end
 
-    started = num_servers
-    while started > target_servers
+    up = num_servers
+    while up > target_servers
       sleep 1
-      started = count_state($servers, 'started')
+      up = count_state('up')
     end
   end
 end
