@@ -21,7 +21,7 @@ def start_server server_id
     settings: {
       ops: 'whatupdave'
     },
-    funpack_id: '50a976ec7aae5741bb000001',
+    funpack_id: '50a976fb7aae5741bb000002',
     reply_key: server_id
   )
 end

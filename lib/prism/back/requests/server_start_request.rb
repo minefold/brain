@@ -15,7 +15,7 @@ module Prism
       redis.publish_json "servers:requests:start:#{reply_key}",
         args.merge(state: state)
     end
-
+    
     def run
       if server_id.nil?
         reply 'failed', reason: 'server not found'
@@ -74,6 +74,7 @@ module Prism
               start_options
 
           else
+            redis.del "server:#{server_id}:state"
             reply 'failed', reason: 'no_instances_available'
           end
         end

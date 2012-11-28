@@ -80,7 +80,6 @@ module Prism
           kick_player "No server found, visit minefold.com"
 
         else
-          # if this server hasn't run before, server_id will be nil
           @server_id = servers.getvalue(0,0)
           server_pc_id = servers.getvalue(0,1)
           settings = JSON.load(servers.getvalue(0,2))
@@ -107,6 +106,8 @@ module Prism
       # server_pc_id
       reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")
 
+      redis.sadd 'servers:shared', server_pc_id
+      
       redis.lpush_hash "servers:requests:start",
         server_id: server_pc_id,
         settings: settings,
