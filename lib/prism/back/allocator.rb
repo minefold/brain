@@ -23,7 +23,7 @@ module Prism
         start_options = {
           pinky_id: pinky[:id],
           ram: { min: ram_required, max: ram_required },
-          slots: pinky[:slots_required]
+          slots: slots
         }
       end
     end

@@ -74,7 +74,6 @@ module Prism
 
     def stopped
       redis.get "server:#{server_id}:restart" do |restart|
-        puts "STOPPED. RESTART: #{restart}"
         if restart
           log.info event: 'restarting_server', server_id: server_id
           redis.lpush_hash "servers:requests:start", server_id: server_id
@@ -171,7 +170,6 @@ module Prism
             iter.return(count)
           end
         }, proc{|count|
-          puts "players: #{count}"
           Librato::Metrics.submit 'players.count' => {
             :type => :gauge,
             :value => count,
