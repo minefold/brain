@@ -46,7 +46,7 @@ module Prism
     end
 
     def pinky_allocations
-      @pinkies.map do |pinky|
+      @pinkies.select{|p| p.box_type}.map do |pinky|
         {
           id: pinky.id,
           state: pinky.state,

@@ -58,16 +58,18 @@ module Prism
             end
           end
 
-          redis.publish_json "servers:requests:start:#{server_id}",
-            state: 'started',
-            host: pinky['ip'],
-            port: ps['port']
+          if pinky and ps
+            redis.publish_json "servers:requests:start:#{server_id}",
+              state: 'started',
+              host: pinky['ip'],
+              port: ps['port']
 
-          Resque.push 'high', class: 'ServerStartedJob', args: [
-            server_id.to_s,
-            pinky['ip'],
-            ps['port']
-          ]
+            Resque.push 'high', class: 'ServerStartedJob', args: [
+              server_id.to_s,
+              pinky['ip'],
+              ps['port']
+            ]
+          end
         end
       end
     end
