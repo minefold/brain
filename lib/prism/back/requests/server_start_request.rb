@@ -29,7 +29,7 @@ module Prism
                 pinky_id = key.split(':')[1]
                 redis.get_json("box:#{pinky_id}") do |pinky|
                   redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
-                    if pinky['ip'] and ps['port']
+                    if pinky
                       reply 'started',
                         server_id: server_id,
                         host: pinky['ip'],
