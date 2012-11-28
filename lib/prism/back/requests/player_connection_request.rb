@@ -19,7 +19,7 @@ module Prism
       whitelist = settings['whitelist'] || ''
       ops = settings['ops'] || ''
 
-      (whitelist.split("\n") + ops.split("\n")).include?(username)
+      (whitelist.split("\n").map{|u| u.strip.downcase } + ops.split("\n").map{|u| u.strip.downcase}).include?(username.downcase)
     end
 
     def pg
@@ -92,6 +92,7 @@ module Prism
             kick_player 'No coins. Buy more at minefold.com'
 
           elsif !whitelisted?(username, settings)
+
             kick_player 'You are not white-listed on this server. Visit minefold.com'
 
           else
@@ -107,7 +108,7 @@ module Prism
       reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")
 
       redis.sadd 'servers:shared', server_pc_id
-      
+
       redis.lpush_hash "servers:requests:start",
         server_id: server_pc_id,
         settings: settings,
