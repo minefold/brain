@@ -48,7 +48,7 @@ module Models
           }
 
           doc['$set'].merge!(funpack_id: funpack_id) if funpack_id
-          doc['$set'].merge!(setttings: settings) if settings
+          doc['$set'].merge!(settings: settings) if settings
 
           update(query, doc, upserted)
         end
