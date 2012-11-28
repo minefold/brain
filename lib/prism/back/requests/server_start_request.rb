@@ -84,9 +84,9 @@ module Prism
     def start_with_settings snapshot_id, settings, funpack_id, start_options
       # TODO store in database
       funpacks = {
-        '50a976ec7aae5741bb000001' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
-        '50a976fb7aae5741bb000002' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-essentials/1.tar.lzo',
-        '50a977097aae5741bb000003' => 'https://minefold-production.s3.amazonaws.com/funpacks/slugs/minecraft-tekkit/1.tar.lzo',
+        '50a976ec7aae5741bb000001' => 'https://party-cloud-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
+        '50a976fb7aae5741bb000002' => 'https://party-cloud-production.s3.amazonaws.com/funpacks/slugs/minecraft-essentials/1.tar.lzo',
+        '50a977097aae5741bb000003' => 'https://party-cloud-production.s3.amazonaws.com/funpacks/slugs/minecraft-tekkit/1.tar.lzo',
       }
 
       funpack = funpacks[funpack_id]
