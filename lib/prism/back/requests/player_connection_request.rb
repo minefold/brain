@@ -59,7 +59,7 @@ module Prism
 
             where host=$1 and deleted_at is null
             limit 1
-          }, [host])
+          }, [host.downcase])
 
         players = pg.query(%Q{
             select players.id, users.coins from players

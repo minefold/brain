@@ -172,7 +172,7 @@ module Prism
             iter.return(count)
           end
         }, proc{|count|
-          Librato::Metrics.submit 'players.count' => {
+          $metrics.add 'players.count' => {
             :type => :gauge,
             :value => count,
             :source => 'party-cloud'

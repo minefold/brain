@@ -18,10 +18,10 @@ Bugsnag.configure do |config|
   config.use_ssl = true
 end
 
-$metrics = false
+$metrics = nil
 if ENV['LIBRATO_EMAIL'] and ENV['LIBRATO_API_TOKEN']
-  $metrics = true
   Librato::Metrics.authenticate ENV['LIBRATO_EMAIL'], ENV['LIBRATO_API_TOKEN']
+  $metrics = Librato::Metrics::Queue.new
 end
 
 module Prism
@@ -29,6 +29,14 @@ module Prism
     EM.error_handler do |e|
       Bugsnag.notify(e)
       raise e
+    end
+    
+    EM.add_periodic_timer(10) do
+      begin
+        $metrics.submit
+      rescue => e
+        puts "#{e}\n#{e.backtrace}"
+      end
     end
 
     # Pinkies.collect do |pinkies|
