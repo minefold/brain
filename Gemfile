@@ -27,13 +27,5 @@ group :development do
 end
 
 group :test do
-  # gem "autotest-fsevent"
-  gem "autotest-growl"
-  gem 'launchy'
-  gem 'rr', '~> 1.0.3'
-  gem 'rspec'
-  gem 'timecop', '~> 0.3.5'
-  gem 'em-spec', git:'https://github.com/joshbuddy/em-spec.git', require:'em-spec/rspec'
-  gem 'fakeredis'
-  gem "ZenTest", "~> 4.4.2"
+  gem "turn", require: false
 end

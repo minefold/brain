@@ -2,8 +2,21 @@ require 'bundler/setup'
 Bundler.require :default
 
 require 'resque/tasks'
+require 'rake/testtask'
 
 $:.unshift File.join File.dirname(__FILE__), 'lib'
+
+task :default => :test
+
+task :test do
+  Rake::TestTask.new do |t|
+    require 'turn/autorun'
+  
+    t.libs.push "lib"
+    t.test_files = FileList['test/*_test.rb']
+    t.verbose = true
+  end
+end
 
 task "resque:setup" do
   require 'models'
