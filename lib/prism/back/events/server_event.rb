@@ -116,18 +116,15 @@ module Prism
 
     def player_connected
       redis.sadd "server:#{server_id}:players", username
-      record_player_metrics
     end
 
     def player_disconnected
       redis.srem "server:#{server_id}:players", username
-      record_player_metrics
     end
 
     def players_listed
       redis.del "server:#{server_id}:players"
       redis.sadd "server:#{server_id}:players", usernames
-      record_player_metrics
     end
 
     def settings_changed
@@ -160,26 +157,6 @@ module Prism
         cb.call player_ids
       end
       cb
-    end
-
-    def record_player_metrics
-      return unless $metrics
-
-      redis.keys 'server:*:players' do |keys|
-        EM::Iterator.new(keys, 10).inject(0, proc{|count, key, iter|
-          op = redis.scard(key)
-          op.callback do |count|
-            iter.return(count)
-          end
-        }, proc{|count|
-          $metrics.add 'players.count' => {
-            :type => :gauge,
-            :value => count,
-            :source => 'party-cloud'
-          }
-        })
-      end
-
     end
   end
 end

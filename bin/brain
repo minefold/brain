@@ -31,13 +31,13 @@ module Prism
       raise e
     end
     
-    EM.add_periodic_timer(10) do
-      begin
-        $metrics.submit
-      rescue => e
-        puts "#{e}\n#{e.backtrace}"
-      end
-    end
+    # EM.add_periodic_timer(10) do
+    #   begin
+    #     $metrics.submit
+    #   rescue => e
+    #     puts "#{e}\n#{e.backtrace}"
+    #   end
+    # end
 
     # Pinkies.collect do |pinkies|
     #   allocator = Allocator.new(pinkies)
