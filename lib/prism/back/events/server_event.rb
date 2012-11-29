@@ -1,3 +1,5 @@
+require 'core_ext/hash'
+
 module Prism
   class ServerEvent < Request
     include ChatMessaging
@@ -10,15 +12,27 @@ module Prism
     def log
       @log ||= Brain::Logger.new
     end
-
+    
     def run
       if type != 'info'
-        log.info event: 'server_event',
+        data = {
+          event: 'server_event',
           pinky_id: pinky_id,
           server_id: server_id,
           server_ts: ts,
-          type: type,
-          msg: msg
+          type: type
+        }
+
+        data.merge_val(:msg, msg)
+        data.merge_val(:snapshot_id, snapshot_id)
+        data.merge_val(:url, url)
+        data.merge_val(:username, username)
+        data.merge_val(:usernames, usernames)
+        data.merge_val(:actor, actor)
+        data.merge_val(:key, key)
+        data.merge_val(:value, value)
+
+        log.info data
       end
 
       case type
