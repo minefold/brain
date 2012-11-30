@@ -2,6 +2,10 @@ require 'uri'
 require 'redis'
 require 'bson'
 require 'json'
+require 'mongo'
+
+$:.unshift File.join File.dirname(__FILE__), '../lib'
+require 'prism/prism_mongo'
 
 def redis_connect
   uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
@@ -14,6 +18,11 @@ end
 
 $redis = redis_connect
 
+include Prism::Mongo
+
+$mongo = mongo_connect
+$server_ids = $mongo['servers'].find({}).limit(100).map{|s| s['_id']}
+
 def start_server server_id
   puts "starting #{server_id}"
   $redis.lpush "servers:requests:start", JSON.dump(
@@ -21,7 +30,7 @@ def start_server server_id
     settings: {
       ops: 'whatupdave'
     },
-    funpack_id: '50a976fb7aae5741bb000002',
+    funpack_id: '50a976ec7aae5741bb000001',
     reply_key: server_id
   )
 end
@@ -68,7 +77,8 @@ puts "starting: #{count_state('starting')}  up: #{count_state('up')}"
 def change_servers target_servers
   if target_servers > $num_servers
     (target_servers - $num_servers).times do
-      start_server BSON::ObjectId.new.to_s
+      new_server_id = $server_ids.shift
+      start_server new_server_id.to_s
       sleep 1
     end
 
@@ -109,7 +119,7 @@ while true
   num_servers = count_state('up')
 
   print "> "
-  command = gets
+  command = gets.strip
 
   if command =~ /s (\d+)/
     change_servers $1.to_i
