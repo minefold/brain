@@ -95,6 +95,7 @@ module Prism
       h.each do |id, h|
         pinkies << Pinky.new(
           id,
+          Time.at(h['started_at'] || 0),
           h['state'],
           h['freeDiskMb'],
           h['freeRamMb'],

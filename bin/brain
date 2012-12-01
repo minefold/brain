@@ -24,12 +24,15 @@ if ENV['LIBRATO_EMAIL'] and ENV['LIBRATO_API_TOKEN']
   $metrics = Librato::Metrics::Queue.new
 end
 
+$log = Brain::Logger.new
+
 module Prism
   EM.run do
     EM.error_handler do |e|
+      $log.error(e)
       Bugsnag.notify(e)
     end
-    
+
     # EM.add_periodic_timer(10) do
     #   begin
     #     $metrics.submit

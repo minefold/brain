@@ -15,8 +15,9 @@ module Brain
       out('warn', data)
     end
   
-    def error e, data
+    def error e, data = {}
       data["error"] = e
+      data["backtrace"] = e.backtrace
       out("error", data)
     end
 
