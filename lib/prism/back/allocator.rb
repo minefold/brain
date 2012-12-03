@@ -30,8 +30,7 @@ module Prism
 
     def find_pinky_for_new_world(slots_required)
       # use the bigger instance types first,
-      # then use the newest instance so the older ones
-      # cycle out
+      # then use the oldest one so we minimise box usage
 
       candidates = pinky_allocations.select {|pinky|
 
@@ -41,7 +40,7 @@ module Prism
           slots_required <= pinky[:slots_available]
 
       }.sort_by{|pinky| -pinky[:total_slots] }.
-        sort_by{|pinky| -pinky[:started_at].to_i }
+        sort_by{|pinky| pinky[:started_at].to_i }
 
       candidates.first if candidates.any?
     end
