@@ -101,7 +101,6 @@ module Prism
     end
 
     def valid_server(server)
-      p server
       if %w(t 1 true).include?(server['shared'])
         shared_server(server)
       else
@@ -112,7 +111,7 @@ module Prism
     def shared_server(server)
       find_player_by_username(username) do |player|
         if player.nil?
-          kick_player "Sign up to play here at minefold.com"
+          kick_player "Link your Minecraft account at minefold.com"
         else
           if (player['coins'] || '0').to_i <= 0
             kick_player 'No coins. Get more at minefold.com'
