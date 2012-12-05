@@ -165,7 +165,7 @@ module Prism
     def connected_player_usernames(server_id, *a, &b)
       cb = EM::Callback(*a, &b)
       op = redis.smembers("server:#{server_id}:players") 
-      op.call do |usernames|
+      op.callback do |usernames|
         cb.call usernames
       end
       cb
