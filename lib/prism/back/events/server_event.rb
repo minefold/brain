@@ -12,7 +12,7 @@ module Prism
     def log
       @log ||= Brain::Logger.new
     end
-    
+
     def run
       if type != 'info'
         data = {
@@ -52,8 +52,8 @@ module Prism
         player_connected
       when 'player_disconnected'
         player_disconnected
-      when 'players_listed'
-        players_listed
+      when 'players_list'
+        players_list
 
       when 'settings_changed'
         settings_changed
@@ -136,7 +136,7 @@ module Prism
       redis.srem "server:#{server_id}:players", username
     end
 
-    def players_listed
+    def players_list
       redis.del "server:#{server_id}:players"
       redis.sadd "server:#{server_id}:players", usernames
     end

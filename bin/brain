@@ -58,6 +58,7 @@ module Prism
     [ PlayerConnectionRequest,
       ServerEvent,
       ServerStartRequest,
+      ServerRestartRequest,
       ServerStopRequest,
       ServerReallocateRequest ].each do |klass|
         QueueProcessor.new klass
