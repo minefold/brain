@@ -51,6 +51,7 @@ module Prism
     subscription.psubscribe "worlds:*"
     subscription.psubscribe "servers:*"
     subscription.psubscribe "workers:*"
+    subscription.psubscribe "players:*"
     subscription.on :pmessage do |key, channel, message|
       Prism::Messaging.deliver_message channel, message
     end

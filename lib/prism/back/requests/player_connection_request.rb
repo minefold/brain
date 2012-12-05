@@ -7,12 +7,13 @@ module Prism
     include Back::PlayerConnection
     include ChatMessaging
 
-    process "players:connection_request", :username, :target_host, :remote_ip
+    process "players:connection_request", :username, :target_host
 
     log_tags :username
 
     def kick_player message
-      redis.publish "players:disconnect:#{username}", message
+      redis.publish_json "players:connection_request:#{username}",
+        failed: message
     end
 
     def whitelisted?(username, settings)
@@ -45,13 +46,23 @@ module Prism
 
       host = target_host.split(':')[0]
 
+      if host =~ /([\w-]+)\.verify\.minefold\.com/
+        verification_request($1)
+      else
+        connection_request(host)
+      end
+    end
+
+    def find_server_by_host(host, *a, &b)
+      cb = EM::Callback(*a, &b)
       EM.defer(proc {
-        servers = pg.query(%Q{
+        results = pg.query(%Q{
             select servers.id,
-                   servers.party_cloud_id,
+                   servers.party_cloud_id as server_pc_id,
                    servers.settings,
-                   funpacks.party_cloud_id,
-                   worlds.party_cloud_id
+                   servers.shared,
+                   funpacks.party_cloud_id as funpack_pc_id,
+                   worlds.party_cloud_id as snapshot_pc_id
 
             from servers
               inner join funpacks on servers.funpack_id = funpacks.id
@@ -60,8 +71,14 @@ module Prism
             where host=$1 and deleted_at is null
             limit 1
           }, [host.downcase])
+        results[0] if results.count > 0
+      }, cb)
+    end
 
-        players = pg.query(%Q{
+    def find_player_by_username(username, *a, &b)
+      cb = EM::Callback(*a, &b)
+      EM.defer(proc {
+        results = pg.query(%Q{
             select players.id, users.coins from players
               inner join users on users.id = players.user_id
             where players.game_id=$1
@@ -69,37 +86,67 @@ module Prism
               and users.deleted_at is null
             limit 1
           }, [1, username])
+        results[0] if results.count > 0
+      }, cb)
+    end
 
-        [servers, players]
-      }, proc {|servers, players|
-
-        if players.count == 0
-          kick_player "Sign up to play here at minefold.com"
-
-        elsif servers.count == 0
+    def connection_request(host)
+      find_server_by_host(host) do |server|
+        if server.nil?
           kick_player "No server found, visit minefold.com"
-
         else
-          @server_id = servers.getvalue(0,0)
-          server_pc_id = servers.getvalue(0,1)
-          settings = JSON.load(servers.getvalue(0,2))
-          funpack_pc_id = servers.getvalue(0,3)
+          valid_server(server)
+        end
+      end
+    end
 
-          @player_id = players.getvalue(0,0)
-          coins = players.getvalue(0,1).to_i
+    def valid_server(server)
+      p server
+      if %w(t 1 true).include?(server['shared'])
+        shared_server(server)
+      else
+        allow_request(server)
+      end
+    end
 
-          if coins <= 0
-            kick_player 'No coins. Buy more at minefold.com'
-
-          elsif !whitelisted?(username, settings)
-
-            kick_player 'You are not white-listed on this server. Visit minefold.com'
-
+    def shared_server(server)
+      find_player_by_username(username) do |player|
+        if player.nil?
+          kick_player "Sign up to play here at minefold.com"
+        else
+          if (player['coins'] || '0').to_i <= 0
+            kick_player 'No coins. Get more at minefold.com'
           else
-            start_world server_pc_id, funpack_pc_id, settings
+            allow_request(server)
           end
         end
-      })
+      end
+    end
+
+    def allow_request(server)
+      @server_id = server['id'].to_i
+      server_pc_id = server['server_pc_id']
+      settings = JSON.load(server['settings'])
+      funpack_pc_id = server['funpack_pc_id']
+
+      if !whitelisted?(username, settings)
+        kick_player 'You are not white-listed on this server. Visit minefold.com'
+
+      else
+        start_world server_pc_id, funpack_pc_id, settings
+      end
+
+    end
+
+    def verification_request(token)
+      listen_once "players:verification_request:#{token}" do |response|
+        info "verification response:#{response}"
+        kick_player response
+      end
+
+      Resque.push 'high',
+        class: 'LinkMinecraftPlayerJob',
+        args: [token, username]
     end
 
     def start_world server_pc_id, funpack_pc_id, settings
@@ -136,7 +183,6 @@ module Prism
 
       else
         kick_player reply['failed']
-
       end
     end
 

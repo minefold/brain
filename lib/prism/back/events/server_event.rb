@@ -118,10 +118,10 @@ module Prism
             class: 'NormalServerTickedJob', args: [server_id, timestamp]
 
         else
-          connected_player_ids(server_id) do |player_ids|
+          connected_player_usernames(server_id) do |usernames|
             Resque.push 'high',
               class: 'SharedServerTickedJob', args: [
-                server_id, player_ids, timestamp
+                server_id, usernames, timestamp
               ]
           end
         end
@@ -162,13 +162,10 @@ module Prism
     end
 
     # TODO this logic belongs in Minefold, not Party Cloud
-    def connected_player_ids(server_id, *a, &b)
+    def connected_player_usernames(server_id, *a, &b)
       cb = EM::Callback(*a, &b)
-      redis.hgetall("players:playing") do |players|
-        player_ids = players.select {|player_id, player_server_id|
-          player_server_id == server_id
-        }.keys
-        cb.call player_ids
+      redis.smembers("server:#{server_id}:players") do |usernames|
+        cb.call usernames
       end
       cb
     end
