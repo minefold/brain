@@ -138,7 +138,9 @@ module Prism
 
     def players_list
       redis.del "server:#{server_id}:players"
-      redis.sadd "server:#{server_id}:players", usernames
+      usernames.each do |username|
+        redis.sadd "server:#{server_id}:players", username
+      end
     end
 
     def settings_changed
@@ -164,7 +166,7 @@ module Prism
     # TODO this logic belongs in Minefold, not Party Cloud
     def connected_player_usernames(server_id, *a, &b)
       cb = EM::Callback(*a, &b)
-      op = redis.smembers("server:#{server_id}:players") 
+      op = redis.smembers("server:#{server_id}:players")
       op.callback do |usernames|
         cb.call usernames
       end
