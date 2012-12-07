@@ -13,6 +13,7 @@ require 'prism/back/box_type'
 require 'prism/back/pinky'
 require 'prism/back/pinkies'
 require 'prism/back/allocator'
+require 'prism/back/funpack'
 
 Dir[File.expand_path('../back/requests/*.rb', __FILE__)].each { |f| require f }
 Dir[File.expand_path('../back/events/*.rb', __FILE__)].each { |f| require f }

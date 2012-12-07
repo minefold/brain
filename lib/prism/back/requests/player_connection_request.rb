@@ -7,7 +7,7 @@ module Prism
     include Back::PlayerConnection
     include ChatMessaging
 
-    process "players:connection_request", :username, :target_host
+    process "players:connection_request", :username, :target_host, :version
 
     log_tags :username
 
@@ -42,7 +42,7 @@ module Prism
     end
 
     def run
-      debug "processing #{username} #{target_host}"
+      debug "processing #{username} #{target_host} #{version}"
 
       host = target_host.split(':')[0]
 
@@ -94,6 +94,20 @@ module Prism
       find_server_by_host(host) do |server|
         if server.nil?
           kick_player "No server found, visit minefold.com"
+        else
+          valid_client(server)
+        end
+      end
+    end
+
+    def valid_client(server)
+      # hack for tekkit
+      funpack = Funpack.find(server['funpack_pc_id'])
+      if funpack.nil?
+        kick_player "Bad funpack. Contact support@minefold.com"
+      else
+        if funpack.client_version && funpack.client_version != version
+          kick_player funpack.bump_message
         else
           valid_server(server)
         end

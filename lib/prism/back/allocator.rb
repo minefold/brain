@@ -6,8 +6,6 @@ module Prism
       (ENV['ECUS_PER_SLOT'] and ENV['ECUS_PER_SLOT'].to_i) || 1)
     RAM_ALLOCATION = (
       (ENV['RAM_ALLOCATION'] and ENV['RAM_ALLOCATION'].to_f) || 0.9)
-    RAM_PER_PLAYER = (
-      (ENV['RAM_PER_PLAYER'] and ENV['RAM_PER_PLAYER'].to_i) || 128)
 
     attr_accessor :log
 
@@ -68,18 +66,6 @@ module Prism
 
     def server_slots_available pinky
       server_slots(pinky.box_type) - pinky.servers.size
-    end
-
-    def player_slots_available pinky
-      player_slots(pinky) - pinky.players.size
-    end
-
-    def player_slots pinky
-      (allocated_ram_mb(pinky.box_type) / RAM_PER_PLAYER).round
-    end
-
-    def players_per_slot pinky
-      [(player_slots(pinky) / server_slots(pinky.box_type)).ceil, 4].max
     end
   end
 end

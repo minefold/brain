@@ -110,21 +110,10 @@ module Prism
 
     def minute
       # TODO this logic belongs in Minefold, not Party Cloud
-
       timestamp = Time.parse(ts).to_i
-      redis.sismember('servers:shared', server_id) do |shared_server|
-        if shared_server == 0
-          Resque.push 'high',
-            class: 'NormalServerTickedJob', args: [server_id, timestamp]
-
-        else
-          connected_player_usernames(server_id) do |usernames|
-            Resque.push 'high',
-              class: 'SharedServerTickedJob', args: [
-                server_id, usernames, timestamp
-              ]
-          end
-        end
+      connected_player_usernames(server_id) do |usernames|
+        Resque.push 'high', class: 'SharedServerTickedJob',
+          args: [server_id, usernames, timestamp]
       end
     end
 

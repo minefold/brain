@@ -15,7 +15,7 @@ module Prism
       redis.publish_json "servers:requests:start:#{reply_key}",
         args.merge(state: state)
     end
-    
+
     def run
       if server_id.nil?
         reply 'failed', reason: 'server not found'
@@ -86,15 +86,7 @@ module Prism
     end
 
     def start_with_settings snapshot_id, settings, funpack_id, start_options
-      # TODO store in database
-      funpacks = {
-        '50a976ec7aae5741bb000001' => 'https://party-cloud-production.s3.amazonaws.com/funpacks/slugs/minecraft-vanilla/1.tar.lzo',
-        '50a976fb7aae5741bb000002' => 'https://party-cloud-production.s3.amazonaws.com/funpacks/slugs/minecraft-essentials/1.tar.lzo',
-        '50a977097aae5741bb000003' => 'https://party-cloud-production.s3.amazonaws.com/funpacks/slugs/minecraft-tekkit/1.tar.lzo',
-        '50bec3967aae5797c0000004' => 'https://party-cloud-production.s3.amazonaws.com/funpacks/slugs/team-fortress-2/1.tar.lzo',
-      }
-
-      funpack = funpacks[funpack_id]
+      funpack = Funpack.find(funpack_id)
 
       if funpack.nil?
         reply 'failed', reason: "No funpack found for #{funpack_id}"
@@ -102,7 +94,7 @@ module Prism
       else
         start_options.merge!(
           'serverId' => server_id,
-          'funpack' => funpack,
+          'funpack' => funpack.url,
           'settings' => settings
         )
 
