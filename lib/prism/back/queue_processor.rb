@@ -19,7 +19,7 @@ module Prism
       @pop = @redis.brpop @queue, 30
       @pop.callback do |channel, item|
         if item
-          @callback.call item
+          EM.next_tick { @callback.call item }
         end
 
         EM.next_tick { listen }
