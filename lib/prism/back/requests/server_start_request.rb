@@ -85,7 +85,7 @@ module Prism
       end
     end
 
-    def start_with_settings snapshot_id, settings, funpack_id, start_options
+    def start_with_settings(snapshot_id, settings, funpack_id, start_options)
       funpack = Funpack.find(funpack_id)
 
       if funpack.nil?
@@ -112,7 +112,7 @@ module Prism
       end
     end
 
-    def start_server start_options
+    def start_server(start_options)
       start_options['name'] = 'start'
       debug "start options: #{start_options}"
 

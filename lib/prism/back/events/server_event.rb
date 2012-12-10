@@ -52,6 +52,7 @@ module Prism
         player_connected
       when 'player_disconnected'
         player_disconnected
+
       when 'players_list'
         players_list
 
@@ -66,6 +67,8 @@ module Prism
     def started
       redis.get_json("box:#{pinky_id}") do |pinky|
         redis.get_json("pinky:#{pinky_id}:servers:#{server_id}") do |ps|
+          redis.set("server:#{server_id}:state", "up")
+
           redis.del("server:#{server_id}:restart") do |restarted|
             if restarted > 0
               log.info event: 'restarted_server', server_id: server_id
@@ -88,14 +91,33 @@ module Prism
       end
     end
 
+    def start_failed
+      log.info event: 'start_failed', server: server_id
+      redis.del("server:#{server_id}:restart")
+      redis.del("server:#{server_id}:state")
+
+      redis.publish_json "servers:requests:start:#{server_id}",
+        failed: 'Server failed to start. Please contact support'
+    end
+
     def stopped
-      redis.get "server:#{server_id}:restart" do |restart|
-        if restart
-          log.info event: 'restarting_server', server_id: server_id
-          redis.lpush_hash "servers:requests:start", server_id: server_id
+      redis.get "server:#{server_id}:state" do |state|
+        redis.del("server:#{server_id}:state")
+        redis.del("server:#{server_id}:players")
+        redis.del("server:#{server_id}:slots")
+
+        if state == 'starting'
+          start_failed
         else
-          redis.publish_json "servers:requests:stop:#{server_id}", {}
-          Resque.push 'high', class: 'ServerStoppedJob', args: [server_id]
+          redis.get "server:#{server_id}:restart" do |restart|
+            if restart
+              log.info event: 'restarting_server', server_id: server_id
+              redis.lpush_hash "servers:requests:start", server_id: server_id
+            else
+              redis.publish_json "servers:requests:stop:#{server_id}", {}
+              Resque.push 'high', class: 'ServerStoppedJob', args: [server_id]
+            end
+          end
         end
       end
     end
@@ -118,7 +140,11 @@ module Prism
     end
 
     def player_connected
+      timestamp = Time.parse(ts).to_i
       redis.sadd "server:#{server_id}:players", username
+
+      Resque.push 'high', class: 'PlayerConnectedJob',
+        args: [server_id, usernames, timestamp]
     end
 
     def player_disconnected
