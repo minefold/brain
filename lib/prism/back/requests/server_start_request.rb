@@ -35,12 +35,12 @@ module Prism
                         host: pinky['ip'],
                         port: ps['port']
                     else
-                      reply 'failed', reason: '500'
+                      reply 'failed', failed: 'Connection failed. Please try again'
                     end
                   end
                 end
               else
-                reply 'failed', reason: '500'
+                reply 'failed', failed: 'Connection failed. Please try again'
               end
             end
 

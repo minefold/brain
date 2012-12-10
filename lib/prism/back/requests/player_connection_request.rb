@@ -62,13 +62,16 @@ module Prism
                    servers.settings,
                    servers.shared,
                    funpacks.party_cloud_id as funpack_pc_id,
-                   worlds.party_cloud_id as snapshot_pc_id
+                   worlds.party_cloud_id as snapshot_pc_id,
+                   users.coins as creator_coins,
+                   users.username as creator_username
 
             from servers
               inner join funpacks on servers.funpack_id = funpacks.id
                left join worlds on worlds.server_id = servers.id
+              inner join users on servers.creator_id = users.id
 
-            where host=$1 and deleted_at is null
+            where host=$1 and servers.deleted_at is null
             limit 1
           }, [host.downcase])
         results[0] if results.count > 0
@@ -117,6 +120,14 @@ module Prism
     def valid_server(server)
       if %w(t 1 true).include?(server['shared'])
         shared_server(server)
+      else
+        normal_server(server)
+      end
+    end
+
+    def normal_server(server)
+      if (server['creator_coins'] || '0').to_i <= 0
+        kick_player "#{server['creator_username']} is out of coins. Bug them!"
       else
         allow_request(server)
       end
