@@ -29,7 +29,13 @@ module Prism
             id = key.split(':')[1]
 
             h[id] ||= {}
-            h[id].merge!(JSON.load(hb))
+            begin
+              heartbeat = JSON.load(hb)
+              h[id].merge!(heartbeat)
+            rescue => e
+              # if pinky is acting up this might not be valid json
+              puts e
+            end
 
             iter.return(h)
           end
