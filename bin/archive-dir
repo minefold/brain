@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+
+# archive-dir <remote-file>
+
+# archive-dir https://minefold-production.s3.amazonaws.com/worlds/501042431376850800000031/world-data.incremental.tar
+
+# will compress and upload current directory based on file extension
+# handles tar|tar.gz|tar.lzo
+
+require 'tempfile'
+
+S3CURL = File.expand_path File.join __FILE__, '../s3curl'
+
+REMOTE, *compress_args = ARGV
+
+compress_args ||= '.'
+
+if File.basename(REMOTE) =~ /tar\.?(\w+)?$/
+  ext = $1
+  compression = case ext
+  when 'gz'
+    '--use-compress-program gzip'
+  when 'lzo'
+    '--use-compress-program lzop'
+  else
+    ''
+  end
+else
+  abort "unsupported compression format for #{REMOTE}"
+end
+
+def run cmd
+  $stderr.puts cmd
+  result = `#{cmd}`.strip
+  raise "Failed: '#{cmd}'" unless $?.to_i == 0
+  result
+end
+
+Tempfile.open(File.basename(REMOTE)) do |f|
+  run "tar #{compression} -cf #{f.path} #{compress_args.join(' ')}"
+  result = run "#{S3CURL} --put '#{f.path}' -- -I #{REMOTE} --silent --show-error"
+  if result =~ /404 Not Found/
+    abort result
+  end
+end

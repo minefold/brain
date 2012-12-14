@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+
+# restore-dir <remote-file>
+
+# restore-dir https://minefold-production.s3.amazonaws.com/worlds/501042431376850800000031/world-data.incremental.tar
+
+# will download and extract archive to current directory based on file extension
+# handles tar|tar.gz|tar.lzo
+# ex. restore-file
+
+S3CURL = File.expand_path File.join __FILE__, '../s3curl'
+
+REMOTE = ARGV.shift
+
+if File.basename(REMOTE) =~ /tar\.?(\w+)?$/
+  ext = $1
+  decompression = case ext
+  when 'gz'
+    'tar xz'
+  when 'lzo'
+    'lzop -d | tar x'
+  else
+    'tar x'
+  end
+
+  exec "#{S3CURL} -- #{REMOTE} --silent --show-error | #{decompression}"
+
+elsif REMOTE =~ /\.zip$/
+  require 'tmpdir'
+  local_file = File.join(Dir.tmpdir, "#{Time.now.to_i.to_s}.zip")
+  `mkdir -p #{File.dirname(local_file)}`
+  success = system "#{S3CURL} -- #{REMOTE} --silent --show-error -o '#{local_file}'"
+  if !success
+    abort "failed to download #{REMOTE} to #{local_file}"
+  end
+  exec "unzip #{local_file}"
+
+else
+  abort "Unsupported decompression format. Allowed formats: zip, tar, tar.gz, tar.lzo"
+end
+
+

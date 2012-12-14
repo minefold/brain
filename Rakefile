@@ -11,7 +11,7 @@ task :default => :test
 task :test do
   Rake::TestTask.new do |t|
     require 'turn/autorun'
-  
+
     t.libs.push "lib"
     t.test_files = FileList['test/*_test.rb']
     t.verbose = true
@@ -20,13 +20,15 @@ end
 
 task "resque:setup" do
   require 'models'
+  require 'brain'
+  require 'prism/back/funpack'
   require 'jobs'
   require 'json'
 
   uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
   $redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
   Resque.redis = $redis
-  
+
   $mongo = begin
     uri = ENV['MONGO_URL'] || 'mongodb://localhost:27017/minefold_development'
     mongo = ::Mongo::Connection.from_uri(uri)
