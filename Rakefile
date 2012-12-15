@@ -19,6 +19,7 @@ task :test do
 end
 
 task "resque:setup" do
+  Bundler.require(:worker)
   require 'models'
   require 'brain'
   require 'prism/back/funpack'

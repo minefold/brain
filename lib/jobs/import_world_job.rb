@@ -31,7 +31,7 @@ class ImportWorldJob
 
       chdir('world') do
         info 'downloading_world', url: url
-        restore_archive(url)
+        restore_zip_archive(url)
 
         i = funpack_import
         info 'world_info', i
@@ -93,6 +93,16 @@ class ImportWorldJob
     snapshot_id
   end
 
+  def self.restore_zip_archive(url)
+    local_tmp_file = File.join(Dir.tmpdir, "#{Time.now.to_i.to_s}.zip")
+    `mkdir -p #{File.dirname(local_tmp_file)}`
+    success = system "#{s3curl(url)} -o '#{local_tmp_file}'"
+    if !success
+      abort "failed to download #{url} to #{local_tmp_file}"
+    end
+    unzip(local_tmp_file)
+  end
+
   def self.restore_archive(url)
     run("#{Brain.root}/bin/restore-dir", url)
   end
@@ -112,6 +122,26 @@ class ImportWorldJob
     end
     result
   end
+
+  def self.s3curl(url)
+    "#{Brain.root}/bin/s3curl -- #{url} --silent --show-error"
+  end
+
+  def self.unzip(file)
+    Zip::ZipFile.foreach(file)
+      .select {|f| f.file? }
+      .each {|f|
+        FileUtils.mkdir_p(File.dirname(f.name))
+        f.extract(f.name)
+      }
+
+  rescue => e
+    Brain.log.error(e,
+      event: 'unzip_failed', file: file, dir:`pwd`.strip
+    )
+    raise ImportError, "Couldn't read the Zip archive"
+  end
+
 
   def self.chdir(dir)
     `mkdir -p #{dir}`

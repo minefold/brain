@@ -22,8 +22,10 @@ gem 'resque'
 gem 'librato-metrics', require: 'librato/metrics'
 gem 'yajl-ruby'
 
-# this is a hack for importing worlds
-gem 'nbtfile'
+group :worker do
+  gem 'rubyzip', require: 'zip/zip'
+  gem 'nbtfile'
+end
 
 group :development do
   gem 'pry'
