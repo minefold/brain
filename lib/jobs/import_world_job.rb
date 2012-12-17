@@ -47,7 +47,7 @@ class ImportWorldJob
 
         chdir(i['root']) do
           info 'uploading_world', url: import_url
-          run("#{Brain.root}/bin/archive-dir", import_url, paths.join(' '))
+          run("#{Brain.root}/bin/archive-dir", import_url, paths.map{|p| quote(p)}.join(' '))
         end
 
         snapshot_id = save_snapshot(server_id, import_url, ts)
@@ -55,10 +55,10 @@ class ImportWorldJob
       end
     end
   rescue ImportError => e
-    reply(e.message)
+    reply(e.message.to_s)
 
   rescue => e
-    reply(e.message)
+    reply(e.message.to_s)
     raise
   end
 
@@ -154,6 +154,10 @@ class ImportWorldJob
 
   def self.info(event, args)
     Brain.log.info(args.merge(event: event, dir:`pwd`.strip))
+  end
+
+  def self.quote(s)
+    %Q{"#{s}"}
   end
 
 end

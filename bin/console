@@ -12,4 +12,40 @@ include Prism::Mongo
 
 $mongo = mongo_connect
 
+def oid(id)
+  BSON::ObjectId(id.to_s)
+end``
+
+def server(server_id)
+  $mongo['servers'].find(_id:oid(server_id)).first
+end
+
+def snapshot(snapshot_id)
+  $mongo['snapshots'].find(_id:oid(snapshot_id)).first
+end
+
+def snapshots(server_id)
+  svr = server(server_id)
+
+  snapshots = []
+  s = snapshot(svr['snapshot_id'])
+  snapshots << s
+  while s['parent']
+    s = snapshot(s['parent'])
+    snapshots << s
+  end
+  snapshots
+end
+
+def set_snapshot_url(server_id, url)
+  svr = server(server_id)
+  update_id('snapshots', svr['snapshot_id'], '$set' => {'url' => url})
+end
+
+def update_id(coll, id, update)
+  $mongo[coll].update({_id: oid(id)}, update)
+end
+
+
+
 binding.pry
