@@ -82,13 +82,13 @@ module Prism
       cb = EM::Callback(*a, &b)
       EM.defer(proc {
         results = pg.query(%Q{
-            select players.id, users.coins from players
-              inner join users on users.id = players.user_id
-            where players.game_id=$1
-              and players.uid=$2
+            select accounts.id, users.coins from accounts
+              inner join users on users.id = accounts.user_id
+            where accounts.type = 'Accounts::Mojang'
+              and accounts.uid=$1
               and users.deleted_at is null
             limit 1
-          }, [1, username])
+          }, [username])
         results[0] if results.count > 0
       }, cb)
     end
