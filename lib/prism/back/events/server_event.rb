@@ -84,7 +84,8 @@ module Prism
             Resque.push 'high', class: 'ServerStartedJob', args: [
               server_id.to_s,
               pinky['ip'],
-              ps['port']
+              ps['port'],
+              Time.parse(ts).to_i
             ]
           end
         end
@@ -115,7 +116,8 @@ module Prism
               redis.lpush_hash "servers:requests:start", server_id: server_id
             else
               redis.publish_json "servers:requests:stop:#{server_id}", {}
-              Resque.push 'high', class: 'ServerStoppedJob', args: [ts, server_id]
+              Resque.push 'high', class: 'ServerStoppedJob', args: [
+                Time.parse(ts).to_i, server_id]
             end
           end
         end
