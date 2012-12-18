@@ -115,7 +115,7 @@ module Prism
               redis.lpush_hash "servers:requests:start", server_id: server_id
             else
               redis.publish_json "servers:requests:stop:#{server_id}", {}
-              Resque.push 'high', class: 'ServerStoppedJob', args: [server_id]
+              Resque.push 'high', class: 'ServerStoppedJob', args: [ts, server_id]
             end
           end
         end
