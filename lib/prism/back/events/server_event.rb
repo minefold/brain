@@ -144,11 +144,15 @@ module Prism
       redis.sadd "server:#{server_id}:players", username
 
       Resque.push 'high', class: 'PlayerConnectedJob',
-        args: [server_id, usernames, timestamp]
+        args: [timestamp, server_id, username]
     end
 
     def player_disconnected
       redis.srem "server:#{server_id}:players", username
+
+      timestamp = Time.parse(ts).to_i
+      Resque.push 'high', class: 'PlayerDisconnectedJob',
+        args: [timestamp, server_id, username]
     end
 
     def players_list
