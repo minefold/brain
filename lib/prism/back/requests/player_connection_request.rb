@@ -169,7 +169,7 @@ module Prism
       end
 
       Resque.push 'high',
-        class: 'LinkMinecraftPlayerJob',
+        class: 'LinkMojangAccountJob',
         args: [token, username]
     end
 
