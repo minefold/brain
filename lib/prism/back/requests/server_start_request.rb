@@ -6,14 +6,19 @@ module Prism
     process "servers:requests:start",
       :server_id, :settings, :funpack_id, :reply_key
 
-    attr_reader :server_id, :server_id, :settings, :funpack_id
+    attr_reader :server_id, :settings, :funpack_id
 
     log_tags :server_id
 
     def reply state, args = {}
-      puts "replying servers:requests:start:#{reply_key} #{args.merge(state: state)}"
-      redis.publish_json "servers:requests:start:#{reply_key}",
-        args.merge(state: state)
+      if state == 'failed'
+        redis.lpush_hash 'server:events', server_id: server_id, reason: args[:reason]
+
+      else
+        puts "replying servers:requests:start:#{reply_key} #{args.merge(state: state)}"
+        redis.publish_json "servers:requests:start:#{reply_key}",
+          args.merge(state: state)
+      end
     end
 
     def run
@@ -73,8 +78,8 @@ module Prism
 
           if start_options and start_options[:pinky_id]
             start_with_settings server.snapshot_id,
-              server.settings,
-              server.funpack_id,
+              settings,
+              funpack_id,
               start_options
 
           else

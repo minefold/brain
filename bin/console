@@ -14,7 +14,7 @@ $mongo = mongo_connect
 
 def oid(id)
   BSON::ObjectId(id.to_s)
-end``
+end
 
 def server(server_id)
   $mongo['servers'].find(_id:oid(server_id)).first

@@ -18,6 +18,11 @@ task :test do
   end
 end
 
+def redis_connection
+  uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
+  Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+end
+
 task "resque:setup" do
   Bundler.require(:worker)
   require 'models'
@@ -26,8 +31,7 @@ task "resque:setup" do
   require 'jobs'
   require 'json'
 
-  uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
-  $redis = Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
+  $redis = redis_connection
   Resque.redis = $redis
 
   $mongo = begin
@@ -47,5 +51,15 @@ task "resque:setup" do
       db_name ||= URI.parse(uri).path[1..-1]
       mongo[db_name]
     end
+  end
+end
+
+namespace :funpack do
+  task :start do
+    redis_connection.lpush "servers:requests:start", JSON.dump(
+      server_id: ENV['SERVER'],
+      funpack_id: ENV['FUNPACK'],
+      settings: {},
+    )
   end
 end

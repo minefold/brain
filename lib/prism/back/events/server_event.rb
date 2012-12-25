@@ -99,6 +99,7 @@ module Prism
 
       redis.publish_json "servers:requests:start:#{server_id}",
         failed: 'Server failed to start. Please contact support'
+      Resque.push 'high', class: 'ServerStoppedJob', args: [Time.now.to_i, server_id]
     end
 
     def stopped
