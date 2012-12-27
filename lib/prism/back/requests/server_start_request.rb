@@ -101,6 +101,7 @@ module Prism
           'serverId' => server_id,
           'funpack' => funpack.url,
           'funpackId' => funpack_id,
+          'funpackUrl' => funpack.url,
           'settings' => settings
         )
 
