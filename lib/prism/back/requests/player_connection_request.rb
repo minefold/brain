@@ -127,7 +127,7 @@ module Prism
 
     def normal_server(server)
       if (server['creator_coins'] || '0').to_i <= 0
-        kick_player "#{server['creator_username']} is out of coins. Bug them!"
+        kick_player "#{server['creator_username']} is out of time. Bug them!"
       else
         allow_request(server)
       end
@@ -139,7 +139,7 @@ module Prism
           kick_player "Link your Minecraft account at minefold.com"
         else
           if (player['coins'] || '0').to_i <= 0
-            kick_player 'No coins. Get more at minefold.com'
+            kick_player 'Out of time! Get more at minefold.com'
           else
             allow_request(server)
           end
