@@ -7,13 +7,19 @@ module Prism
     include Back::PlayerConnection
     include ChatMessaging
 
-    process "players:connection_request", :username, :target_host, :version
+    process "players:connection_request", :client, :client_address, :version, :username, :target_host, :reply_key
 
     log_tags :username
 
     def kick_player message
-      redis.publish_json "players:connection_request:#{username}",
-        failed: message
+      # TODO new prism will always send reply_key
+      if reply_key
+        redis.publish_json reply_key,
+          failed: message
+      else
+        redis.publish_json "players:connection_request:#{username}",
+          failed: message
+      end
     end
 
     def whitelisted?(username, settings)
@@ -214,11 +220,20 @@ module Prism
       info "connecting to #{host}:#{port}"
 
       # this tells prism to connect the player to the server
-      redis.publish_json "players:connection_request:#{username}",
-        host: host,
-        port: port,
-        player_id: player_id,
-        world_id: server_id
+      # TODO new prism will always send reply_key
+      if reply_key
+        redis.publish_json reply_key,
+          host: host,
+          port: port,
+          player_id: player_id,
+          world_id: server_id
+      else
+        redis.publish_json "players:connection_request:#{username}",
+          host: host,
+          port: port,
+          player_id: player_id,
+          world_id: server_id
+      end
     end
   end
 end
