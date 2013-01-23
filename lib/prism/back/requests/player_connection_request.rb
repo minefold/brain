@@ -11,7 +11,16 @@ module Prism
 
     log_tags :username
 
-    def kick_player message
+    def log(opts)
+      Scrolls.log({
+        username: username,
+        host: target_host,
+        version: version}.merge(opts))
+    end
+
+    def kick_player(message)
+      log(kick: message)
+
       # TODO new prism will always send reply_key
       if reply_key
         redis.publish_json reply_key,
@@ -48,8 +57,6 @@ module Prism
     end
 
     def run
-      debug "processing #{username} #{target_host} #{version}"
-
       host = target_host.split(':')[0]
 
       if host =~ /([\w-]+)\.verify\.minefold\.com/
@@ -61,6 +68,15 @@ module Prism
 
     def find_server_by_host(host, *a, &b)
       cb = EM::Callback(*a, &b)
+
+      query = if host =~ /(\w+)\.fun-(\w+)\.([\w-]+)\.foldserver\.com/
+        log(lookup: 'dynamic', id: $1)
+        ['servers.id=$1', $1]
+      else
+        log(lookup: 'cname', host: host.downcase)
+        ['servers.host=$1', host.downcase]
+      end
+
       EM.defer(proc {
         results = pg.query(%Q{
             select servers.id,
@@ -77,9 +93,9 @@ module Prism
                left join worlds on worlds.server_id = servers.id
               inner join users on servers.creator_id = users.id
 
-            where host=$1 and servers.deleted_at is null
+            where #{query[0]} and servers.deleted_at is null
             limit 1
-          }, [host.downcase])
+          }, [query[1]])
         results[0] if results.count > 0
       }, cb)
     end
@@ -110,7 +126,6 @@ module Prism
     end
 
     def valid_client(server)
-      # hack for tekkit
       funpack = Funpack.find(server['funpack_pc_id'])
       if funpack.nil?
         kick_player "Bad funpack. Contact support@minefold.com"
@@ -163,12 +178,14 @@ module Prism
         kick_player 'You are not white-listed on this server. Visit minefold.com'
 
       else
-        start_world server_pc_id, funpack_pc_id, settings
+        start_server server_pc_id, funpack_pc_id, settings
       end
 
     end
 
     def verification_request(token)
+      log(req: 'mojang_link')
+
       listen_once "players:verification_request:#{token}" do |response|
         info "verification response:#{response}"
         kick_player response
@@ -179,7 +196,7 @@ module Prism
         args: [token, username]
     end
 
-    def start_world server_pc_id, funpack_pc_id, settings
+    def start_server(server_pc_id, funpack_pc_id, settings)
       # if server_pc_id is nil, use a generated reply key until we have a real
       # server_pc_id
       reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")

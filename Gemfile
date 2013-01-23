@@ -22,6 +22,8 @@ gem 'resque'
 gem 'librato-metrics', require: 'librato/metrics'
 gem 'yajl-ruby'
 
+gem 'scrolls'
+
 group :worker do
   gem 'rubyzip', require: 'zip/zip'
   gem 'nbtfile'
