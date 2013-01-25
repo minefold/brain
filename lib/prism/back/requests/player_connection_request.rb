@@ -74,7 +74,7 @@ module Prism
         ['servers.id=$1', $1.to_i]
       else
         log(lookup: 'cname', host: host)
-        ['servers.host=$1', host]
+        ['servers.cname=$1', host]
       end
 
       EM.defer(proc {
