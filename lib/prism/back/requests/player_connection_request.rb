@@ -57,7 +57,7 @@ module Prism
     end
 
     def run
-      host = target_host.split(':')[0]
+      host = target_host.split(':')[0].downcase
 
       if host =~ /([\w-]+)\.verify\.minefold\.com/
         verification_request($1)
@@ -73,8 +73,8 @@ module Prism
         log(lookup: 'dynamic', id: $1)
         ['servers.id=$1', $1]
       else
-        log(lookup: 'cname', host: host.downcase)
-        ['servers.host=$1', host.downcase]
+        log(lookup: 'cname', host: host)
+        ['servers.host=$1', host]
       end
 
       EM.defer(proc {
@@ -180,7 +180,6 @@ module Prism
       else
         start_server server_pc_id, funpack_pc_id, settings
       end
-
     end
 
     def verification_request(token)
