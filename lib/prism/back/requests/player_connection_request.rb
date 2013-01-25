@@ -71,7 +71,7 @@ module Prism
 
       query = if host =~ /(\w+)\.fun-(\w+)\.([\w-]+)\.foldserver\.com/
         log(lookup: 'dynamic', id: $1)
-        ['servers.id=$1', $1]
+        ['servers.id=$1', $1.to_i]
       else
         log(lookup: 'cname', host: host)
         ['servers.host=$1', host]
