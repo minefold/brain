@@ -57,12 +57,12 @@ module Prism
     end
 
     def run
-      host = target_host.split(':')[0].downcase
+      host = target_host.split(':')[0]
 
-      if host =~ /([\w-]+)\.verify\.minefold\.com/
+      if host =~ /([\w-]+)\.verify\.minefold\.com/i
         verification_request($1)
       else
-        connection_request(host)
+        connection_request(host.downcase)
       end
     end
 
