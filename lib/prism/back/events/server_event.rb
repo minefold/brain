@@ -161,7 +161,7 @@ module Prism
     def players_list
       redis.setex "server:#{server_id}:heartbeat", 5*60, 1
       redis.del "server:#{server_id}:players"
-      usernames.each do |username|
+      (usernames || []).each do |username|
         redis.sadd "server:#{server_id}:players", username
       end
     end
