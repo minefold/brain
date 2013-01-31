@@ -5,7 +5,33 @@ module Prism
     include ChatMessaging
     include Logging
 
-    process "server:events", :pinky_id, :server_id, :ts, :type, :msg, :level, :snapshot_id, :url, :username, :usernames, :actor, :key, :value
+    process "server:events",
+      :pinky_id,
+      :server_id,
+      :ts,            # server timestamp
+      :level,         # level (info|warn|error)
+      :type,          # event type
+      :msg,           # msg (chat)
+
+      # backups
+      :snapshot_id,
+      :url,
+
+      # user accounts
+      :auth,
+      :uid,
+      :uids,
+      :nick,
+
+      # settings changed
+      :actor,
+      :key,
+      :value,
+
+      # deprecated
+      :username,
+      :usernames
+
 
     log_tags :server_id
 
@@ -26,6 +52,10 @@ module Prism
         data.merge_val(:msg, msg)
         data.merge_val(:snapshot_id, snapshot_id)
         data.merge_val(:url, url)
+        data.merge_val(:auth, auth)
+        data.merge_val(:uid, uid)
+        data.merge_val(:uids, uids)
+        data.merge_val(:nick, nick)
         data.merge_val(:username, username)
         data.merge_val(:usernames, usernames)
         data.merge_val(:actor, actor)
@@ -50,6 +80,7 @@ module Prism
 
       when 'player_connected'
         player_connected
+
       when 'player_disconnected'
         player_disconnected
 
@@ -134,7 +165,6 @@ module Prism
     end
 
     def minute
-      # TODO this logic belongs in Minefold, not Party Cloud
       timestamp = Time.parse(ts).to_i
       connected_player_usernames(server_id) do |usernames|
         Resque.push 'high', class: 'SharedServerTickedJob',
@@ -144,24 +174,24 @@ module Prism
 
     def player_connected
       timestamp = Time.parse(ts).to_i
-      redis.sadd "server:#{server_id}:players", username
+      redis.sadd "server:#{server_id}:players", (uid || username)
 
       Resque.push 'high', class: 'PlayerConnectedJob',
-        args: [timestamp, server_id, username]
+        args: [timestamp, server_id, (uid || username)]
     end
 
     def player_disconnected
-      redis.srem "server:#{server_id}:players", username
+      redis.srem "server:#{server_id}:players", (uid || username)
 
       timestamp = Time.parse(ts).to_i
       Resque.push 'high', class: 'PlayerDisconnectedJob',
-        args: [timestamp, server_id, username]
+        args: [timestamp, server_id, (uid || username)]
     end
 
     def players_list
       redis.setex "server:#{server_id}:heartbeat", 5*60, 1
       redis.del "server:#{server_id}:players"
-      (usernames || []).each do |username|
+      (uids || usernames || []).each do |username|
         redis.sadd "server:#{server_id}:players", username
       end
     end
@@ -177,7 +207,6 @@ module Prism
     end
 
     def fatal_error
-      # TODO this logic belongs in Minefold, not Party Cloud
       redis.get "server:#{server_id}:state" do |state|
         puts "SERVER STATE: #{state}"
       end
@@ -186,7 +215,6 @@ module Prism
         JSON.dump(failed: 'server error')
     end
 
-    # TODO this logic belongs in Minefold, not Party Cloud
     def connected_player_usernames(server_id, *a, &b)
       cb = EM::Callback(*a, &b)
       op = redis.smembers("server:#{server_id}:players")
