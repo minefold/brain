@@ -138,6 +138,7 @@ module Prism
         redis.del("server:#{server_id}:state")
         redis.del("server:#{server_id}:players")
         redis.del("server:#{server_id}:slots")
+        redis.del("server:#{server_id}:funpack")
 
         if state == 'starting'
           start_failed

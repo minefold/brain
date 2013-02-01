@@ -123,6 +123,7 @@ module Prism
       start_options['name'] = 'start'
       debug "start options: #{start_options}"
 
+      redis.set "server:#{server_id}:funpack", start_options['funpackId']
       redis.set "server:#{server_id}:slots", start_options[:slots]
       redis.lpush_hash "pinky:#{start_options[:pinky_id]}:in", start_options
     end
