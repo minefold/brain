@@ -1,6 +1,8 @@
 module Models
   class Server < Model
     extend Prism::Mongo
+    
+    # TODO rename settings => data
 
     collection :servers
 
@@ -18,7 +20,7 @@ module Models
       end
     end
 
-    def self.upsert id, funpack_id, settings, *a, &b
+    def self.upsert id, funpack_id, data, *a, &b
       cb = EM::Callback(*a, &b)
 
       ts = Time.now
@@ -38,7 +40,7 @@ module Models
             created_at: ts,
             updated_at: ts,
             funpack_id: funpack_id,
-            settings: settings
+            settings: data
           }, upserted)
         else
           doc = {
@@ -48,7 +50,7 @@ module Models
           }
 
           doc['$set'].merge!(funpack_id: funpack_id) if funpack_id
-          doc['$set'].merge!(settings: settings) if settings
+          doc['$set'].merge!(settings: data) if data
 
           update(query, doc, upserted)
         end

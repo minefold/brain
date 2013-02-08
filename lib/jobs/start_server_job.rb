@@ -1,11 +1,12 @@
 class StartServerJob
   @queue = :pc
 
-  def self.perform server_id, funpack_id, settings
+  def self.perform server_id, funpack_id, data
     $redis.lpush "servers:requests:start", JSON.dump(
       server_id: server_id,
       funpack_id: funpack_id,
-      settings: settings,
+      settings: data,
+      data: data
     )
   end
 end

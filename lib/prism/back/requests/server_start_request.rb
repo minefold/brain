@@ -3,8 +3,10 @@ module Prism
     include Logging
     include Messaging
 
+    # TODO deprecate settings
+
     process "servers:requests:start",
-      :server_id, :settings, :funpack_id, :reply_key
+      :server_id, :settings, :funpack_id, :reply_key, :data
 
     attr_reader :server_id, :settings, :funpack_id
 
@@ -69,7 +71,7 @@ module Prism
 
       reply 'starting', server_id: server_id
 
-      Models::Server.upsert(server_id, funpack_id, settings) do |server|
+      Models::Server.upsert(server_id, funpack_id, data || settings) do |server|
         slots_required = server.slots || 1
 
         Pinkies.collect do |pinkies|
@@ -79,6 +81,7 @@ module Prism
           if start_options and start_options[:pinky_id]
             start_with_settings server.snapshot_id,
               settings,
+              data,
               funpack_id,
               start_options
 
@@ -90,7 +93,7 @@ module Prism
       end
     end
 
-    def start_with_settings(snapshot_id, settings, funpack_id, start_options)
+    def start_with_settings(snapshot_id, settings, data, funpack_id, start_options)
       funpack = Funpack.find(funpack_id)
 
       if funpack.nil?
@@ -102,7 +105,8 @@ module Prism
           'funpack' => funpack.url,
           'funpackId' => funpack_id,
           'funpackUrl' => funpack.url,
-          'settings' => settings
+          'settings' => settings,
+          'data' => data
         )
 
         if snapshot_id.nil?
