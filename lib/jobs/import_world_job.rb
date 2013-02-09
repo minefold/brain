@@ -136,9 +136,12 @@ class ImportWorldJob
       }
 
   rescue => e
-    Brain.log.error(e,
-      event: 'unzip_failed', file: file, dir:`pwd`.strip
+    Scrolls.log(
+      at: 'import world',
+      failed: 'unzip_failed',
+      file: file
     )
+
     raise ImportError, "Couldn't read the Zip archive"
   end
 
