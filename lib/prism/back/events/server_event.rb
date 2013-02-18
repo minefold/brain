@@ -1,4 +1,5 @@
 require 'core_ext/hash'
+require 'core_ext/string'
 
 module Prism
   class ServerEvent < Request
@@ -25,10 +26,13 @@ module Prism
 
       # settings changed
       :actor,
-      :key,
+      :add,
+      :remove,
+      :set,
       :value,
 
       # deprecated
+      :key,
       :username,
       :usernames
 
@@ -59,6 +63,9 @@ module Prism
         data.merge_val(:username, username)
         data.merge_val(:usernames, usernames)
         data.merge_val(:actor, actor)
+        data.merge_val(:set, set)
+        data.merge_val(:add, add)
+        data.merge_val(:remove, remove)
         data.merge_val(:key, key)
         data.merge_val(:value, value)
 
@@ -198,13 +205,26 @@ module Prism
     end
 
     def settings_changed
-      Resque.push 'high',
-        class: 'ServerSettingsChangedJob',
-         args: [server_id, {
-           setting: key,
-           value: value,
-           actor: actor
-         }]
+      transform = case
+      when key =~ /([a-z]+)_add/      # TODO deprecate
+        { add: $1 }
+      when key =~ /([a-z]+)_remove/   # TODO deprecate
+        { remove: $1 }
+      when !key.blank?                # TODO deprecate
+        { set: key }
+      when !add.blank?
+        { add: add }
+      when !remove.blank?
+        { remove: remove }
+      when !set.blank?
+        { set: set }
+      end
+
+      if transform
+        Resque.push 'low',
+          class: 'ServerSettingsChangedJob',
+           args: [Time.now.to_i, server_id, transform.merge(actor: actor, value: value)]
+      end
     end
 
     def fatal_error
