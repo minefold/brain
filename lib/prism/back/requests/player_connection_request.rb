@@ -80,6 +80,7 @@ module Prism
       EM.defer(proc {
         results = pg.query(%Q{
             select servers.id,
+                   servers.name,
                    servers.party_cloud_id as server_pc_id,
                    servers.settings,
                    servers.shared,
@@ -171,14 +172,18 @@ module Prism
     def allow_request(server)
       @server_id = server['id'].to_i
       server_pc_id = server['server_pc_id']
+
       settings = JSON.load(server['settings'])
+
+      data = JSON.dump(name: server['name'], settings: settings)
+
       funpack_pc_id = server['funpack_pc_id']
 
       if !whitelisted?(username, settings)
         kick_player 'You are not white-listed on this server. Visit minefold.com'
 
       else
-        start_server server_pc_id, funpack_pc_id, settings
+        start_server server_pc_id, funpack_pc_id, settings, data
       end
     end
 
@@ -195,7 +200,7 @@ module Prism
         args: [token, username]
     end
 
-    def start_server(server_pc_id, funpack_pc_id, settings)
+    def start_server(server_pc_id, funpack_pc_id, settings, data)
       # if server_pc_id is nil, use a generated reply key until we have a real
       # server_pc_id
       reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")
@@ -205,6 +210,7 @@ module Prism
       redis.lpush_hash "servers:requests:start",
         server_id: server_pc_id,
         settings: settings,
+        data: data,
         funpack_id: funpack_pc_id,
         reply_key: reply_key
 

@@ -45,6 +45,14 @@ class Funpack < Struct.new(:id, :url, :client_version, :bump_message, :allocatio
         AllocationFactors.new(
           cpu: 0.5, ram: 1.0, players: 32
         )),
+
+      Funpack.new(
+        '512159a67aae57bf17000005',
+        "#{base_url}/512159a67aae57bf17000005.tar.gz",
+        nil, nil,
+        AllocationFactors.new(
+          cpu: 0.5, ram: 0.9, players: 5
+        )),
     ]
   end
 end

@@ -5,8 +5,7 @@ class StartServerJob
     $redis.lpush "servers:requests:start", JSON.dump(
       server_id: server_id,
       funpack_id: funpack_id,
-      settings: data,
-      data: data
+      data: JSON.dump(data) # TODO: shouldn't be sent as JSON from web
     )
   end
 end

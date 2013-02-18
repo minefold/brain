@@ -46,6 +46,11 @@ def update_id(coll, id, update)
   $mongo[coll].update({_id: oid(id)}, update)
 end
 
+def set_funpack(server_id, funpack_id)
+  update = { '$set' => { 'funpack_id' => funpack_id } }
+  $mongo['servers'].update({_id: oid(server_id)}, update)
+end
+
 
 
 binding.pry
