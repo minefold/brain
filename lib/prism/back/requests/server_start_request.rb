@@ -74,6 +74,11 @@ module Prism
       Models::Server.upsert(server_id, funpack_id, data || settings) do |server|
         slots_required = server.slots || 1
 
+        # TODO hack to give FTB 2 slots
+        if funpack_id == '512159a67aae57bf17000005'
+          slots_required = [2, slots_required].max
+        end
+
         Pinkies.collect do |pinkies|
           allocator = Allocator.new(pinkies)
           start_options = allocator.start_options_for_new_server(slots_required)
