@@ -23,7 +23,7 @@ class Funpack < Struct.new(:id, :url, :client_version, :bump_message, :allocatio
 
       Funpack.new(
         '50a976fb7aae5741bb000002',
-        "#{base_url}/minecraft-essentials/stable.tar.lzo",
+        "#{base_url}/50a976fb7aae5741bb000002.tar.gz",
         nil, nil,
         AllocationFactors.new(
           cpu: 0.8, ram: 0.9, players: 5
