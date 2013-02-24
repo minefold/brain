@@ -117,7 +117,7 @@ class ImportWorldJob
     cmd_s = "#{cmd} #{args.join(' ')}"
     result = `#{cmd_s} 2>&1`
     if $?.exitstatus != 0
-      Brain.log.out("error", event: 'command_failed', cmd: cmd_s, dir:`pwd`.strip, result: result)
+      Brain.log.info(event: 'command_failed', cmd: cmd_s, dir:`pwd`.strip, result: result)
       raise StandardError, result
     end
     result
