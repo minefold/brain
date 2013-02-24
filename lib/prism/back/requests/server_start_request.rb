@@ -14,6 +14,12 @@ module Prism
 
     def reply state, args = {}
       if state == 'failed'
+        Scrolls.log(
+          at: 'server_start_request',
+          failed: args[:reason],
+          server_id: server_id
+        )
+
         redis.lpush_hash 'server:events', server_id: server_id, reason: args[:reason]
 
       else

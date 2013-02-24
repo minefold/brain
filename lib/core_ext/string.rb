@@ -1,5 +1,11 @@
+class NilClass
+  def blank?
+    true
+  end
+end
+
 class String
   def blank?
-    self == nil || self == ''
+    self == ''
   end
 end

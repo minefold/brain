@@ -76,6 +76,13 @@ module Prism
       when 'started'
         started
 
+      when 'stopping'
+        # TODO: stopping state disabled because restart doesn't work yet
+        # restarting doesn't work because the servers settings aren't being
+        # read back out of mongo when they aren't provided in the start server
+        # request
+        # stopping
+
       when 'stopped'
         stopped
 
@@ -138,6 +145,10 @@ module Prism
       redis.publish_json "servers:requests:start:#{server_id}",
         failed: 'Server failed to start. Please contact support'
       Resque.push 'high', class: 'ServerStoppedJob', args: [Time.now.to_i, server_id]
+    end
+
+    def stopping
+      redis.set("server:#{server_id}:state", "stopping")
     end
 
     def stopped
