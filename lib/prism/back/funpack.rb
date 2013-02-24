@@ -49,7 +49,7 @@ class Funpack < Struct.new(:id, :url, :client_version, :bump_message, :allocatio
 
       Funpack.new(
         '50bec3967aae5797c0000004',
-        "#{base_url}/team-fortress-2/stable.tar.lzo",
+        "#{base_url}/50bec3967aae5797c0000004.tar.gz",
         nil, nil,
         AllocationFactors.new(
           cpu: 0.5, ram: 1.0, players: 32
