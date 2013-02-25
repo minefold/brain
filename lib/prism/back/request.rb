@@ -18,7 +18,13 @@ module Prism
     def process message
       parts = self.class.message_parts.size == 1 ? { self.class.message_parts.first => message } : JSON.parse(message)
       
-      parts.each{|k,v| self.instance_variable_set(:"@#{k}", v) }
+      parts.each do |k,v| 
+        if k =~ /^[0-9]/
+          puts "INVALID INSTANCE VAR #{k}"
+        else
+          self.instance_variable_set(:"@#{k}", v)
+        end
+      end
 
       run
     end
