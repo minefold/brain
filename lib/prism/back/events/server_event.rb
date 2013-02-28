@@ -81,7 +81,7 @@ module Prism
         # restarting doesn't work because the servers settings aren't being
         # read back out of mongo when they aren't provided in the start server
         # request
-        # stopping
+        stopping
 
       when 'stopped'
         stopped

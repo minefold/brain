@@ -59,7 +59,7 @@ namespace :funpack do
     redis_connection.lpush "servers:requests:start", JSON.dump(
       server_id: ENV['SERVER'],
       funpack_id: ENV['FUNPACK'],
-      settings: {},
+      data: '',
     )
   end
 end

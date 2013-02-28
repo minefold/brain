@@ -209,7 +209,6 @@ module Prism
 
       redis.lpush_hash "servers:requests:start",
         server_id: server_pc_id,
-        settings: settings,
         data: data,
         funpack_id: funpack_pc_id,
         reply_key: reply_key

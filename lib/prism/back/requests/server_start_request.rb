@@ -3,12 +3,10 @@ module Prism
     include Logging
     include Messaging
 
-    # TODO deprecate settings
-
     process "servers:requests:start",
-      :server_id, :settings, :funpack_id, :reply_key, :data
+      :server_id, :funpack_id, :reply_key, :data
 
-    attr_reader :server_id, :settings, :funpack_id
+    attr_reader :server_id, :funpack_id
 
     log_tags :server_id
 
@@ -76,8 +74,11 @@ module Prism
       redis.set "server:#{server_id}:state", "starting"
 
       reply 'starting', server_id: server_id
-
-      Models::Server.upsert(server_id, funpack_id, data || settings) do |server|
+      
+      Models::Server.upsert(server_id, funpack_id, data) do |server|
+        funpack_id ||= server.funpack_id
+        data ||= server.settings
+        
         slots_required = server.slots || 1
 
         # TODO hack to give FTB 2 slots
@@ -91,7 +92,6 @@ module Prism
 
           if start_options and start_options[:pinky_id]
             start_with_settings server.snapshot_id,
-              settings,
               data,
               funpack_id,
               start_options
@@ -104,7 +104,7 @@ module Prism
       end
     end
 
-    def start_with_settings(snapshot_id, settings, data, funpack_id, start_options)
+    def start_with_settings(snapshot_id, data, funpack_id, start_options)
       funpack = Funpack.find(funpack_id)
 
       if funpack.nil?
@@ -116,7 +116,6 @@ module Prism
           'funpack' => funpack.url,
           'funpackId' => funpack_id,
           'funpackUrl' => funpack.url,
-          'settings' => settings,
           'data' => data
         )
 
