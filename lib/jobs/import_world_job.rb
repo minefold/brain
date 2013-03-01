@@ -108,7 +108,7 @@ class ImportWorldJob
   end
 
   def self.funpack_import
-    JSON.load(run('bundle exec ../funpack/bin/import'))
+    JSON.load(run('BUNDLE_GEMFILE=../funpack/Gemfile ../funpack/bin/import'))
   rescue StandardError => e
     raise ImportError, "Failed to process world: #{JSON.load(e.message)['failed']}"
   end
