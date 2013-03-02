@@ -17,9 +17,6 @@ class ImportWorldJob
       raise ImportError, "No funpack found for #{funpack_id}"
     end
 
-    # hardcode minecraft funpack for now
-    funpack = Funpack.find('50a976ec7aae5741bb000001')
-
     working_dir = File.join(
       Dir.tmpdir, Time.now.to_i.to_s, File.basename(url))
 
@@ -108,7 +105,12 @@ class ImportWorldJob
   end
 
   def self.funpack_import
-    JSON.load(run('BUNDLE_GEMFILE=../funpack/Gemfile ../funpack/bin/import'))
+    env = [
+      'GEM_PATH=/app/vendor/bundle/ruby/1.9.1',
+      'BUNDLE_GEMFILE=../funpack/Gemfile',
+      'BUNDLE_PATH=../funpack/vendor/bundle/ruby/1.9.1',
+    ]
+    JSON.load(run("#{env.join(' ')} ../funpack/bin/import"))
   rescue StandardError => e
     raise ImportError, "Failed to process world: #{JSON.load(e.message)['failed']}"
   end
