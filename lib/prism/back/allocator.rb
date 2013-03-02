@@ -35,7 +35,8 @@ module Prism
         log.info(pinky.merge(event: 'candidate'))
 
         pinky[:state] == 'up' and
-          slots_required <= pinky[:slots_available]
+          slots_required <= pinky[:slots_available] and
+          pinky[:slots_available] > 0
 
       }.sort_by{|pinky| -pinky[:total_slots] }.
         sort_by{|pinky| pinky[:started_at].to_i }
