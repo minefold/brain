@@ -74,11 +74,11 @@ module Prism
       redis.set "server:#{server_id}:state", "starting"
 
       reply 'starting', server_id: server_id
-      
+
       Models::Server.upsert(server_id, funpack_id, data) do |server|
         funpack_id ||= server.funpack_id
         data ||= server.settings
-        
+
         slots_required = server.slots || 1
 
         # TODO hack to give FTB 2 slots
@@ -91,7 +91,7 @@ module Prism
           start_options = allocator.start_options_for_new_server(slots_required)
 
           if start_options and start_options[:pinky_id]
-            start_with_settings server.snapshot_id,
+            start_with_settings (server.new_snapshot_id || server.snapshot_id),
               data,
               funpack_id,
               start_options
@@ -134,12 +134,17 @@ module Prism
     end
 
     def start_server(start_options)
-      start_options['name'] = 'start'
-      debug "start options: #{start_options}"
+      Models::Server.update(
+        { _id: BSON::ObjectId(server_id) },
+        { '$unset' => { new_snapshot_id: nil } }
+      ) do
+        start_options['name'] = 'start'
+        debug "start options: #{start_options}"
 
-      redis.set "server:#{server_id}:funpack", start_options['funpackId']
-      redis.set "server:#{server_id}:slots", start_options[:slots]
-      redis.lpush_hash "pinky:#{start_options[:pinky_id]}:in", start_options
+        redis.set "server:#{server_id}:funpack", start_options['funpackId']
+        redis.set "server:#{server_id}:slots", start_options[:slots]
+        redis.lpush_hash "pinky:#{start_options[:pinky_id]}:in", start_options
+      end
     end
   end
 end

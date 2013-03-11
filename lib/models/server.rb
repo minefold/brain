@@ -12,8 +12,8 @@ module Models
        slots
        funpack_id
        settings
-       versions
        snapshot_id
+       new_snapshot_id
     ).each do |field|
       define_method(:"#{field}") do
         @doc[field]
