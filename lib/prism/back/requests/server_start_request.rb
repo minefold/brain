@@ -28,6 +28,14 @@ module Prism
     end
 
     def run
+      Scrolls.log({
+        at: 'servers:requests:start',
+        server_id: server_id,
+        funpack_id: funpack_id,
+        data: data,
+        reply_key: reply_key
+      })
+
       if server_id.nil?
         reply 'failed', reason: 'server not found'
       else
