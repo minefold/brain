@@ -108,7 +108,7 @@ module Prism
       funpack = Funpack.find(funpack_id)
 
       if funpack.nil?
-        reply 'failed', reason: "No funpack found for #{funpack_id}"
+        reply 'failed', reason: "No funpack found for #{funpack_id.inspect}"
 
       else
         start_options.merge!(

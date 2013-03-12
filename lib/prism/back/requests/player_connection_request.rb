@@ -128,7 +128,7 @@ module Prism
 
     def valid_client(server)
       funpack = Funpack.find(server['funpack_pc_id'])
-      if funpack.nil?
+      if funpack == '' || funpack.nil?
         kick_player "Bad funpack. Contact support@minefold.com"
       else
         if funpack.client_version && funpack.client_version != version
