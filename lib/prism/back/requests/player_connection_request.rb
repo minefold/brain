@@ -201,7 +201,9 @@ module Prism
     end
 
     def start_server(server_pc_id, funpack_pc_id, settings, data)
-      reply_key = server_pc_id
+      # if server_pc_id is nil, use a generated reply key until we have a real
+      # server_pc_id
+      reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")
 
       redis.sadd 'servers:shared', server_pc_id
 
@@ -213,6 +215,7 @@ module Prism
         reply_key: reply_key
       })
 
+
       redis.lpush_hash "servers:requests:start",
         server_id: server_pc_id,
         data: data,
@@ -223,7 +226,18 @@ module Prism
     end
 
     def reply_handler reply
+      if reply['server_id']
+        pg.exec('update servers set party_cloud_id=$1 where id=$2', [reply['server_id'], @server_id])
+        redis.sadd 'servers:shared', reply['server_id']
+      end
+
       case reply['state']
+      when 'starting'
+        # start listening on the real server_id rather than generated reply key
+        EM.next_tick do
+          listen_once_json "servers:requests:start:#{reply['server_id']}", method(:reply_handler)
+        end
+
       when 'started'
         connect_player_to_server @player_id, reply['server_id'], reply['host'], reply['port']
 
