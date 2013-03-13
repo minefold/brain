@@ -6,7 +6,7 @@ module Prism
     include Logging
     include Back::PlayerConnection
     include ChatMessaging
-
+    
     process "players:connection_request", :client, :client_address, :version, :username, :target_host, :reply_key
 
     log_tags :username
@@ -242,7 +242,7 @@ module Prism
         connect_player_to_server @player_id, reply['server_id'], reply['host'], reply['port']
 
       else
-        kick_player reply['failed']
+        kick_player reply['message']
       end
     end
 

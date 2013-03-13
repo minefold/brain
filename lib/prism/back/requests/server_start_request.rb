@@ -3,6 +3,12 @@ module Prism
     include Logging
     include Messaging
 
+    MESSAGES = {
+      server_not_found: 'Unknown server. Check minefold.com for correct address',
+      no_instances_available: 'Minefold is under heavy load! Please try again',
+      no_funpack_found: 'No funpack found for server. Contact support@minefold.com',
+    }
+
     process "servers:requests:start",
       :server_id, :funpack_id, :reply_key, :data
 
@@ -10,21 +16,23 @@ module Prism
 
     log_tags :server_id
 
-    def reply state, args = {}
+    def reply(state, args = {})
+      args[:message] = MESSAGES[args[:reason].to_sym] if args[:reason]
+
       if state == 'failed'
         Scrolls.log(
           at: 'server_start_request',
           failed: args[:reason],
+          message: args[:message],
           server_id: server_id
         )
 
-        redis.lpush_hash 'server:events', server_id: server_id, reason: args[:reason]
-
-      else
-        puts "replying servers:requests:start:#{reply_key} #{args.merge(state: state)}"
-        redis.publish_json "servers:requests:start:#{reply_key}",
-          args.merge(state: state)
+        redis.lpush_hash 'server:events', server_id: server_id, failed: args[:reason]
       end
+
+      puts "replying servers:requests:start:#{reply_key} #{args.merge(state: state)}"
+      redis.publish_json "servers:requests:start:#{reply_key}",
+        args.merge(state: state)
     end
 
     def run
@@ -37,7 +45,7 @@ module Prism
       })
 
       if server_id.nil?
-        reply 'failed', reason: 'server not found'
+        reply 'failed', reason: 'server_not_found'
       else
         redis.get "server:#{server_id}:state" do |state|
           case state
@@ -83,8 +91,21 @@ module Prism
 
       reply 'starting', server_id: server_id
 
+      Scrolls.log(
+        at: 'starting server',
+        server_id: server_id,
+        funpack_id: funpack_id
+      )
+
       Models::Server.upsert(server_id, funpack_id, data) do |server|
         # funpack_id ||= server.funpack_id
+
+        Scrolls.log(
+          at: 'updated server',
+          server_id: server_id,
+          funpack_id: funpack_id
+        )
+
         data ||= server.settings
 
         slots_required = server.slots || 1
@@ -116,7 +137,7 @@ module Prism
       funpack = Funpack.find(funpack_id)
 
       if funpack.nil?
-        reply 'failed', reason: "No funpack found for #{funpack_id.inspect}"
+        reply 'failed', reason: 'no_funpack_found'
 
       else
         start_options.merge!(
