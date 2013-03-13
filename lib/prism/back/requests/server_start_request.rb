@@ -99,14 +99,14 @@ module Prism
 
       Models::Server.upsert(server_id, funpack_id, data) do |server|
         @funpack_id ||= server.funpack_id
+        @data ||= server.settings
 
         Scrolls.log(
           at: 'updated server',
           server_id: server_id,
-          funpack_id: funpack_id
+          funpack_id: funpack_id,
+          data: data
         )
-
-        data ||= server.settings
 
         slots_required = server.slots || 1
 
