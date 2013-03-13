@@ -84,7 +84,7 @@ module Prism
       reply 'starting', server_id: server_id
 
       Models::Server.upsert(server_id, funpack_id, data) do |server|
-        funpack_id ||= server.funpack_id
+        # funpack_id ||= server.funpack_id
         data ||= server.settings
 
         slots_required = server.slots || 1
