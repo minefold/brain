@@ -98,7 +98,7 @@ module Prism
       )
 
       Models::Server.upsert(server_id, funpack_id, data) do |server|
-        # funpack_id ||= server.funpack_id
+        @funpack_id ||= server.funpack_id
 
         Scrolls.log(
           at: 'updated server',
