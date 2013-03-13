@@ -242,7 +242,7 @@ module Prism
         connect_player_to_server @player_id, reply['server_id'], reply['host'], reply['port']
 
       else
-        kick_player reply['message']
+        kick_player reply['message'] || "Server failed to start. Please try again or contact support@minefold.com"
       end
     end
 
