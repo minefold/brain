@@ -6,7 +6,7 @@ module Prism
     include Logging
     include Back::PlayerConnection
     include ChatMessaging
-    
+
     process "players:connection_request", :client, :client_address, :version, :username, :target_host, :reply_key
 
     log_tags :username
@@ -29,13 +29,6 @@ module Prism
         redis.publish_json "players:connection_request:#{username}",
           failed: message
       end
-    end
-
-    def whitelisted?(username, settings)
-      whitelist = settings['whitelist'] || ''
-      ops = settings['ops'] || ''
-
-      (whitelist.split("\n").map{|u| u.strip.downcase } + ops.split("\n").map{|u| u.strip.downcase}).include?(username.downcase)
     end
 
     def pg
@@ -84,6 +77,7 @@ module Prism
                    servers.party_cloud_id as server_pc_id,
                    servers.settings,
                    servers.shared,
+                   servers.access_policy_id,
                    funpacks.party_cloud_id as funpack_pc_id,
                    worlds.party_cloud_id as snapshot_pc_id,
                    users.coins as creator_coins,
@@ -121,6 +115,7 @@ module Prism
         if server.nil?
           kick_player "No server found, visit minefold.com"
         else
+          server['settings'] ||= {}
           valid_client(server)
         end
       end
@@ -169,22 +164,36 @@ module Prism
       end
     end
 
+    # TODO move into web. Or core.
+    def access_policy(server)
+      policies = {
+        '1' => {
+          whitelist: (server['settings']['whitelist'] || '').split
+        },
+        '2' => {
+          blacklist: (server['settings']['blacklist'] || '').split
+        }
+      }
+
+      access_policy = policies[0]
+      if policy_id = server['access_policy_id']
+        access_policy = policies[policy_id]
+      end
+    end
+
     def allow_request(server)
       @server_id = server['id'].to_i
       server_pc_id = server['server_pc_id']
 
-      settings = JSON.load(server['settings'])
-
-      data = JSON.dump(name: server['name'], settings: settings)
+      data = JSON.dump(
+        name: server['name'],
+        access: access_policy(server),
+        settings: JSON.load(server['settings'])
+      )
 
       funpack_pc_id = server['funpack_pc_id']
 
-      if !whitelisted?(username, settings)
-        kick_player 'You are not white-listed on this server. Visit minefold.com'
-
-      else
-        start_server server_pc_id, funpack_pc_id, settings, data
-      end
+      start_server server_pc_id, funpack_pc_id, data
     end
 
     def verification_request(token)
@@ -200,7 +209,7 @@ module Prism
         args: [token, username]
     end
 
-    def start_server(server_pc_id, funpack_pc_id, settings, data)
+    def start_server(server_pc_id, funpack_pc_id, data)
       # if server_pc_id is nil, use a generated reply key until we have a real
       # server_pc_id
       reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")
