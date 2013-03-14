@@ -184,16 +184,13 @@ module Prism
     def allow_request(server)
       @server_id = server['id'].to_i
       server_pc_id = server['server_pc_id']
+      funpack_pc_id = server['funpack_pc_id']
 
-      data = JSON.dump(
+      start_server(server_pc_id, funpack_pc_id, JSON.dump(
         name: server['name'],
         access: access_policy(server),
         settings: JSON.load(server['settings'])
-      )
-
-      funpack_pc_id = server['funpack_pc_id']
-
-      start_server server_pc_id, funpack_pc_id, data
+      ))
     end
 
     def verification_request(token)

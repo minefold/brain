@@ -125,13 +125,18 @@ module Prism
               state: 'started',
               host: pinky['ip'],
               port: ps['port']
-
-            Resque.push 'high', class: 'ServerStartedJob', args: [
-              server_id.to_s,
-              pinky['ip'],
-              ps['port'],
-              Time.parse(ts).to_i
-            ]
+              
+            Models::Server.update(
+              { _id: BSON::ObjectId(server_id) },
+              { '$set' => { host: "#{pinky['ip']}:#{ps['port']}" } }
+            ) do
+              Resque.push 'high', class: 'ServerStartedJob', args: [
+                server_id.to_s,
+                pinky['ip'],
+                ps['port'],
+                Time.parse(ts).to_i
+              ]
+            end
           end
         end
       end
