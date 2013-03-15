@@ -58,7 +58,7 @@ class ImportWorldJob
     reply(e.message.to_s)
 
   rescue => e
-    reply(e.message.to_s)
+    reply("There was an error processing your file. Please contact support@minefold.com")
     raise
   end
 
