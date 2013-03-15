@@ -29,6 +29,7 @@ class ImportWorldJob
       chdir('funpack') do
         info 'downloading_funpack', funpack: funpack.url
         restore_archive(funpack.url)
+        run("bundle update")
       end
 
       chdir('world') do
