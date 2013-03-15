@@ -179,6 +179,7 @@ module Prism
       if policy_id = server['access_policy_id']
         access_policy = policies[policy_id]
       end
+      access_policy
     end
 
     def allow_request(server)
