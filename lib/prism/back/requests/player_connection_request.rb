@@ -115,7 +115,6 @@ module Prism
         if server.nil?
           kick_player "No server found, visit minefold.com"
         else
-          server['settings'] ||= {}
           valid_client(server)
         end
       end
@@ -166,20 +165,22 @@ module Prism
 
     # TODO move into web. Or core.
     def access_policy(server)
+      settings = JSON.parse(server['settings'] || '{}')
+      
       policies = {
         '1' => {
-          whitelist: (server['settings']['whitelist'] || '').split
+          whitelist: (settings['whitelist'] || '').split
         },
         '2' => {
-          blacklist: (server['settings']['blacklist'] || '').split
+          blacklist: (settings['blacklist'] || '').split
         }
       }
 
-      access_policy = policies[0]
+      policy = policies[0]
       if policy_id = server['access_policy_id']
-        access_policy = policies[policy_id]
+        policy = policies[policy_id]
       end
-      access_policy
+      policy
     end
 
     def allow_request(server)
@@ -190,7 +191,7 @@ module Prism
       start_server(server_pc_id, funpack_pc_id, JSON.dump(
         name: server['name'],
         access: access_policy(server),
-        settings: JSON.load(server['settings'])
+        settings: JSON.load(server['settings'] || '{}')
       ))
     end
 
