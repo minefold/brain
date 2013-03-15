@@ -27,6 +27,8 @@ gem 'scrolls'
 group :worker do
   gem 'rubyzip', require: 'zip/zip'
   gem 'nbtfile'
+  gem 'craftbelt'
+  gem 'brock'
 end
 
 group :development do

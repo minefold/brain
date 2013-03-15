@@ -21,15 +21,17 @@ class ImportWorldJob
       Dir.tmpdir, Time.now.to_i.to_s, File.basename(url))
 
     chdir(working_dir) do
+      chdir('world') do
+        info 'downloading_world', url: url
+        restore_zip_archive(url)
+      end
+
       chdir('funpack') do
         info 'downloading_funpack', funpack: funpack.url
         restore_archive(funpack.url)
       end
 
       chdir('world') do
-        info 'downloading_world', url: url
-        restore_zip_archive(url)
-
         i = funpack_import
         info 'world_info', i
 
@@ -93,9 +95,12 @@ class ImportWorldJob
   def self.restore_zip_archive(url)
     local_tmp_file = File.join(Dir.tmpdir, "#{Time.now.to_i.to_s}.zip")
     `mkdir -p #{File.dirname(local_tmp_file)}`
-    success = system "#{s3curl(url)} -o '#{local_tmp_file}'"
+    success = system "#{s3curl(url)} -Lo '#{local_tmp_file}'"
     if !success
-      abort "failed to download #{url} to #{local_tmp_file}"
+      Brain.log.info(
+        event: 'download_failed',
+        url: url)
+      raise StandardError, "failed to download #{url}"
     end
     unzip(local_tmp_file)
   end
@@ -106,7 +111,6 @@ class ImportWorldJob
 
   def self.funpack_import
     env = [
-      'GEM_PATH=/app/vendor/bundle/ruby/1.9.1',
       'BUNDLE_GEMFILE=../funpack/Gemfile',
       'BUNDLE_PATH=../funpack/vendor/bundle/ruby/1.9.1',
     ]
@@ -126,12 +130,12 @@ class ImportWorldJob
   end
 
   def self.s3curl(url)
-    "#{Brain.root}/bin/s3curl -- #{url} --silent --show-error"
+    "#{Brain.root}/bin/s3curl -- '#{url}' --silent --show-error --globoff"
   end
 
   def self.unzip(file)
     Zip::ZipFile.foreach(file)
-      .select {|f| f.file? }
+      .select {|f| f.file? && !f.name.include?('__MACOSX') }
       .each {|f|
         FileUtils.mkdir_p(File.dirname(f.name))
         f.extract(f.name)
