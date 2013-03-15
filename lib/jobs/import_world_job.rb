@@ -60,7 +60,7 @@ class ImportWorldJob
     Brain.log.info(
       event: 'import_failed',
       error: e)
-    
+
     reply("There was an error processing your file. Please contact support@minefold.com")
     raise
   end
@@ -117,6 +117,7 @@ class ImportWorldJob
     env = [
       'BUNDLE_GEMFILE=../funpack/Gemfile',
       'BUNDLE_PATH=../funpack/vendor/bundle/ruby/1.9.1',
+      'GEM_PATH=../funpack/vendor/bundle/ruby/1.9.1',
     ]
     JSON.load(run("#{env.join(' ')} ../funpack/bin/import"))
   rescue StandardError => e
