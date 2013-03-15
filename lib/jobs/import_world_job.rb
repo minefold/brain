@@ -29,7 +29,6 @@ class ImportWorldJob
       chdir('funpack') do
         info 'downloading_funpack', funpack: funpack.url
         restore_archive(funpack.url)
-        run("bundle update")
       end
 
       chdir('world') do
@@ -58,6 +57,10 @@ class ImportWorldJob
     reply(e.message.to_s)
 
   rescue => e
+    Brain.log.info(
+      event: 'import_failed',
+      error: e)
+    
     reply("There was an error processing your file. Please contact support@minefold.com")
     raise
   end
