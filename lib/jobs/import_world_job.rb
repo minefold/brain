@@ -32,10 +32,10 @@ class ImportWorldJob
         restore_archive(funpack.url)
       end
 
-      chdir('world') do
-        i = funpack_import
-        info 'world_info', i
+      i = funpack_import
+      info 'world_info', i
 
+      chdir('world') do
         # clean ./ from start of paths if necessary
         paths = i['paths'].map{|p| p.gsub(/^\.\//,'')}
 
@@ -115,13 +115,12 @@ class ImportWorldJob
   end
 
   def self.funpack_import
-    pack_dir = File.expand_path('../funpack')
-    env = [
-      "BUNDLE_GEMFILE=#{pack_dir}/Gemfile",
-      "GEM_PATH=/app/vendor/bundle/ruby/1.9.1",
-    ]
+    # env = [
+    #   "BUNDLE_GEMFILE=#{pack_dir}/Gemfile",
+    #   "GEM_PATH=/app/vendor/bundle/ruby/1.9.1",
+    # ]
 
-    JSON.load(run("#{env.join(' ')} ../funpack/bin/import"))
+    JSON.load(run("funpack/bin/import"))
   rescue StandardError => e
     raise ImportError, "Failed to process world: #{JSON.load(e.message)['failed']}"
   end
