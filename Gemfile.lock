@@ -7,7 +7,6 @@ GEM
     addressable (2.3.2)
     aggregate (0.2.2)
     ansi (1.4.3)
-    brock (0.1.5)
     bson (1.8.0)
       activesupport
     bson_ext (1.8.0)
@@ -19,8 +18,6 @@ GEM
     coderay (1.0.8)
     colored (1.2)
     cookiejar (0.3.0)
-    craftbelt (0.0.6)
-      nbtfile
     em-hiredis (0.1.1)
       hiredis (~> 0.4.0)
     em-http-request (1.0.3)
@@ -109,11 +106,9 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  brock
   bson_ext (~> 1.8.0)
   bugsnag
   colored
-  craftbelt
   em-hiredis (~> 0.1.1)
   em-http-request
   eventmachine (= 1.0.0.beta.4)
