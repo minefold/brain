@@ -1,4 +1,5 @@
 require 'tmpdir'
+require 'zip/zip'
 
 class ImportError < StandardError; end
 
@@ -117,9 +118,9 @@ class ImportWorldJob
     pack_dir = File.expand_path('../funpack')
     env = [
       "BUNDLE_GEMFILE=#{pack_dir}/Gemfile",
-      "BUNDLE_PATH=#{pack_dir}/vendor/bundle/ruby/1.9.1",
-      "GEM_PATH=#{pack_dir}/vendor/bundle/ruby/1.9.1",
+      "GEM_HOME=/app/vendor/bundle/ruby/1.9.1",
     ]
+
     JSON.load(run("#{env.join(' ')} ../funpack/bin/import"))
   rescue StandardError => e
     raise ImportError, "Failed to process world: #{JSON.load(e.message)['failed']}"
@@ -151,7 +152,8 @@ class ImportWorldJob
     Scrolls.log(
       at: 'import world',
       failed: 'unzip_failed',
-      file: file
+      file: file,
+      error: e
     )
 
     raise ImportError, "Couldn't read the Zip archive"
