@@ -114,10 +114,11 @@ class ImportWorldJob
   end
 
   def self.funpack_import
+    pack_dir = File.expand_path('../funpack')
     env = [
-      'BUNDLE_GEMFILE=../funpack/Gemfile',
-      'BUNDLE_PATH=../funpack/vendor/bundle/ruby/1.9.1',
-      'GEM_PATH=/app/vendor/bundle/ruby/1.9.1',
+      "BUNDLE_GEMFILE=#{pack_dir}/Gemfile",
+      "BUNDLE_PATH=#{pack_dir}/vendor/bundle/ruby/1.9.1",
+      "GEM_PATH=#{pack_dir}/vendor/bundle/ruby/1.9.1",
     ]
     JSON.load(run("#{env.join(' ')} ../funpack/bin/import"))
   rescue StandardError => e
