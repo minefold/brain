@@ -23,6 +23,7 @@ gem 'librato-metrics', require: 'librato/metrics'
 gem 'yajl-ruby'
 
 gem 'scrolls'
+gem 'net-scp', '1.0.4' # 1.0.6 got yanked
 
 group :worker do
   gem 'rubyzip', require: 'zip/zip'
