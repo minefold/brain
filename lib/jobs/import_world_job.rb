@@ -100,7 +100,7 @@ class ImportWorldJob
   def self.restore_zip_archive(url)
     local_tmp_file = File.join(Dir.tmpdir, "#{Time.now.to_i.to_s}.zip")
     `mkdir -p #{File.dirname(local_tmp_file)}`
-    success = system "#{s3curl(url)} -Lo '#{local_tmp_file}'"
+    success = system "curl --silent -Lo '#{local_tmp_file}' '#{url}'"
     if !success
       Brain.log.info(
         event: 'download_failed',
