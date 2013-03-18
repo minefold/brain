@@ -130,7 +130,6 @@ module Prism
               state: 'started',
               host: pinky['ip']
             }
-            puts "publishing: #{msg.inspect}"
             redis.publish_json "servers:requests:start:#{server_id}", msg
 
             Models::Server.update(
