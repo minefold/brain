@@ -123,7 +123,7 @@ module Prism
           if pinky and ps
             redis.publish_json "servers:requests:start:#{server_id}",
               at: Time.now.to_i,
-              ip: pink['ip'],
+              ip: pinky['ip'],
               port: ps['port'],
               state: 'started',
               host: pinky['ip']
