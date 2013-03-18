@@ -18,6 +18,8 @@ module Prism
 
     def reply(state, args = {})
       args[:message] = MESSAGES[args[:reason].to_sym] if args[:reason]
+      args[:ip] = args[:host] if args[:host]
+      args[:at] = Time.now.to_i unless args[:at]
 
       if state == 'failed'
         Scrolls.log(
