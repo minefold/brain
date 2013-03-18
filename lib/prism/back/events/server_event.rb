@@ -123,12 +123,15 @@ module Prism
           end
 
           if pinky and ps
-            redis.publish_json "servers:requests:start:#{server_id}",
+            msg = {
               at: Time.now.to_i,
               ip: pinky['ip'],
               port: ps['port'],
               state: 'started',
               host: pinky['ip']
+            }
+            puts "publishing: #{msg.inspect}"
+            redis.publish_json "servers:requests:start:#{server_id}", msg
 
             Models::Server.update(
               { _id: BSON::ObjectId(server_id) },
