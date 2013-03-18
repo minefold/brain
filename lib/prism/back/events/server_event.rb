@@ -122,10 +122,12 @@ module Prism
 
           if pinky and ps
             redis.publish_json "servers:requests:start:#{server_id}",
+              at: Time.now.to_i,
+              ip: pink['ip'],
+              port: ps['port'],
               state: 'started',
-              host: pinky['ip'],
-              port: ps['port']
-              
+              host: pinky['ip']
+
             Models::Server.update(
               { _id: BSON::ObjectId(server_id) },
               { '$set' => { host: "#{pinky['ip']}:#{ps['port']}" } }
