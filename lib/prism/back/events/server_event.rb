@@ -68,6 +68,8 @@ module Prism
         data.merge_val(:remove, remove)
         data.merge_val(:key, key)
         data.merge_val(:value, value)
+        data.merge_val(:ip, value)
+        data.merge_val(:at, value)
 
         log.info data
       end
