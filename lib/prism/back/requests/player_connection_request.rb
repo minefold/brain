@@ -69,14 +69,19 @@ module Prism
                      servers.shared,
                      servers.access_policy_id,
                      funpacks.party_cloud_id as funpack_pc_id,
+                     funpacks.bolt_allocations,
                      worlds.party_cloud_id as snapshot_pc_id,
                      users.coins as creator_coins,
-                     users.username as creator_username
+                     users.username as creator_username,
+                     subscriptions.expires_at as subscription_expires_at,
+                     plans.bolts as plan_bolts
 
               from servers
                 inner join funpacks on servers.funpack_id = funpacks.id
                  left join worlds on worlds.server_id = servers.id
                 inner join users on servers.creator_id = users.id
+                 left join subscriptions on users.subscription_id = subscriptions.id
+                 left join plans on subscriptions.plan_id = plans.id
 
               where #{query[0]} and servers.deleted_at is null
               limit 1
@@ -190,6 +195,13 @@ module Prism
       if plan_bolts = server[:plan_bolts]
         # allocate based on subscription plan
         allocation = "#{server[:bolt_allocations][plan_bolts - 1]}Mb"
+        Scrolls.log({
+          at: 'using_subscription',
+          expires_at: server[:subscription_expires_at],
+          bolts: plan_bolts,
+          allocation: allocation
+        })
+        
       else
         # leave allocation up to brain
         allocation = nil
@@ -217,15 +229,6 @@ module Prism
 
     def start_server(server_pc_id, funpack_pc_id, allocation, data)
       redis.sadd 'servers:shared', server_pc_id
-
-      Scrolls.log({
-        at: 'prism-back start_server',
-        server_id: server_pc_id,
-        data: data,
-        funpack_id: funpack_pc_id,
-        reply_key: server_pc_id
-      })
-
 
       redis.lpush_hash "servers:requests:start",
         server_id: server_pc_id,
