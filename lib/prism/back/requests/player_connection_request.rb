@@ -106,7 +106,7 @@ module Prism
     def connection_request(host)
       find_server_by_host(host) do |server|
         if server.nil?
-          kick_player "No server found, visit minefold.com"
+          kick_player "Server not found. Check the address on minefold.com"
         else
           valid_client(server)
         end
