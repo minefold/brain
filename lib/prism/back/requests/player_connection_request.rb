@@ -64,35 +64,47 @@ module Prism
 
       query = if host =~ /(\w+)\.fun-(\w+)\.([\w-]+)\.foldserver\.com/
         log(lookup: 'dynamic', id: $1)
-        ['servers.id=$1', $1.to_i]
+        id = $1.to_i
+        # validate integer range before PG query
+        if id < 0 || id > 2147483647
+          nil
+        else
+          ['servers.id=$1', $1.to_i]
+        end
       else
         log(lookup: 'cname', host: host)
         ['servers.cname=$1', host]
       end
 
-      EM.defer(proc {
-        results = pg.query(%Q{
-            select servers.id,
-                   servers.name,
-                   servers.party_cloud_id as server_pc_id,
-                   servers.settings,
-                   servers.shared,
-                   servers.access_policy_id,
-                   funpacks.party_cloud_id as funpack_pc_id,
-                   worlds.party_cloud_id as snapshot_pc_id,
-                   users.coins as creator_coins,
-                   users.username as creator_username
+      if query
+        EM.defer(proc {
+          results = pg.query(%Q{
+              select servers.id,
+                     servers.name,
+                     servers.party_cloud_id as server_pc_id,
+                     servers.settings,
+                     servers.shared,
+                     servers.access_policy_id,
+                     funpacks.party_cloud_id as funpack_pc_id,
+                     worlds.party_cloud_id as snapshot_pc_id,
+                     users.coins as creator_coins,
+                     users.username as creator_username
 
-            from servers
-              inner join funpacks on servers.funpack_id = funpacks.id
-               left join worlds on worlds.server_id = servers.id
-              inner join users on servers.creator_id = users.id
+              from servers
+                inner join funpacks on servers.funpack_id = funpacks.id
+                 left join worlds on worlds.server_id = servers.id
+                inner join users on servers.creator_id = users.id
 
-            where #{query[0]} and servers.deleted_at is null
-            limit 1
-          }, [query[1]])
-        results[0] if results.count > 0
-      }, cb)
+              where #{query[0]} and servers.deleted_at is null
+              limit 1
+            }, [query[1]])
+          results[0] if results.count > 0
+        }, cb)
+      else
+        cb.call nil
+      end
+      
+      cb
     end
 
     def find_player_by_username(username, *a, &b)
