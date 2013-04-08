@@ -9,36 +9,23 @@ module Prism
 
     attr_accessor :log
 
-    def initialize pinkies
+    def initialize(pinkies)
       @pinkies = pinkies
       @log = Brain::Logger.new
     end
 
-    def start_options_for_new_server(slots)
-      if pinky = find_pinky_for_new_world(slots)
-        ram_required = slots * RAM_MB_PER_SLOT
-
-        start_options = {
-          pinky_id: pinky[:id],
-          ram: { min: ram_required, max: ram_required },
-          slots: slots
-        }
-      end
-    end
-
-    def find_pinky_for_new_world(slots_required)
-      # use the bigger instance types first,
+    def find_pinky_for_new_world(ram_required)
+      # use the bigger instance types first, because we're reserving them
       # then use the oldest one so we minimise box usage
 
       candidates = pinky_allocations.select {|pinky|
 
         log.info(pinky.merge(event: 'candidate'))
 
-        pinky[:state] == 'up' and
-          slots_required <= pinky[:slots_available] and
-          pinky[:slots_available] > 0
+        (pinky[:state] == 'up') &&
+          (ram_required <= pinky[:unallocated_ram])
 
-      }.sort_by{|pinky| -pinky[:total_slots] }.
+      }.sort_by{|pinky| -pinky[:total_ram] }.
         sort_by{|pinky| pinky[:started_at].to_i }
 
       candidates.first if candidates.any?
@@ -46,26 +33,38 @@ module Prism
 
     def pinky_allocations
       @pinkies.select{|p| p.box_type}.map do |pinky|
+        box_type = pinky.box_type
+        total_ram = (box_type.ram_mb * RAM_ALLOCATION)
+        allocated_ram = pinky.servers.inject(0) do |sum, s|
+          if s.ram_allocation > 0
+            sum + s.ram_allocation
+          else
+            # TODO deprecate slots
+            sum + s.slots * RAM_MB_PER_SLOT
+          end
+        end
+        
         {
           id: pinky.id,
           state: pinky.state,
-          total_slots: server_slots(pinky.box_type),
-          slots_available: server_slots_available(pinky),
-          started_at: pinky.started_at
+          total_ram: total_ram,
+          unallocated_ram: total_ram - allocated_ram,
+          started_at: pinky.started_at,
+          free_ram: pinky.free_ram_mb
         }
       end
     end
 
-    def allocated_ram_mb box_type
+    def allocated_ram_mb(box_type)
       (box_type.ram_mb * RAM_ALLOCATION)
     end
 
-    def server_slots box_type
+    def server_slots(box_type)
       [(allocated_ram_mb(box_type) / RAM_MB_PER_SLOT).floor,
        (box_type.ecus / ECUS_PER_SLOT).floor].min
     end
 
-    def server_slots_available pinky
+    def server_slots_available(pinky)
       server_slots(pinky.box_type) - pinky.servers.size
     end
   end

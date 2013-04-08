@@ -5,12 +5,12 @@ module Prism
 
     MESSAGES = {
       server_not_found: 'Unknown server. Check minefold.com for correct address',
-      no_instances_available: 'Minefold is under heavy load! Please try again',
+      no_instances_available: 'Minefold is under heavy load! Please try again in a few minutes',
       no_funpack_found: 'No funpack found for server. Contact support@minefold.com',
     }
 
     process "servers:requests:start",
-      :server_id, :funpack_id, :reply_key, :data
+      :server_id, :funpack_id, :reply_key, :data, :allocation
 
     attr_reader :server_id, :funpack_id
 
@@ -117,14 +117,26 @@ module Prism
           slots_required = [2, slots_required].max
         end
 
+        ram_required = if allocation =~ /(\d+)/
+          # allocation will look something like '512Mb'
+          $1.to_i
+        else
+          slots_required * Allocator::RAM_MB_PER_SLOT
+        end
+
         Pinkies.collect do |pinkies|
           allocator = Allocator.new(pinkies)
-          start_options = allocator.start_options_for_new_server(slots_required)
 
-          if start_options and start_options[:pinky_id]
+          if pinky = allocator.find_pinky_for_new_world(ram_required)
+            start_options = {
+              pinky_id: pinky[:id],
+              ram: { min: ram_required, max: ram_required },
+            }
+
             start_with_settings (server.new_snapshot_id || server.snapshot_id),
               data,
               funpack_id,
+              ram_required,
               start_options
 
           else
@@ -173,7 +185,7 @@ module Prism
         debug "start options: #{start_options}"
 
         redis.set "server:#{server_id}:funpack", start_options['funpackId']
-        redis.set "server:#{server_id}:slots", start_options[:slots]
+        redis.set "server:#{server_id}:ram_alloc", start_options[:ram][:max]
         redis.lpush_hash "pinky:#{start_options[:pinky_id]}:in", start_options
       end
     end

@@ -21,31 +21,14 @@ module Prism
     def kick_player(message)
       log(kick: message)
 
-      # TODO new prism will always send reply_key
-      if reply_key
-        redis.publish_json reply_key,
-          failed: message
-      else
-        redis.publish_json "players:connection_request:#{username}",
-          failed: message
-      end
+      redis.publish_json reply_key, failed: message
     end
 
-    def pg
-      $pg ||= if ENV['DATABASE_URL']
-        url = URI.parse(ENV['DATABASE_URL'])
-        PG::Connection.new(
-          host:     url.host,
-          port:     url.port,
-          user:     url.user,
-          password: url.password,
-          dbname:   url.path[1..-1]
-        )
-      else
-        PG::Connection.new(
-          host: 'localhost',
-          dbname: 'minefold_development'
-        )
+    def db
+      $db ||= begin
+        db = Sequel.connect(ENV['DATABASE_URL'] || 'postgres://localhost/minefold_development')
+        db.extension :pg_array
+        db
       end
     end
 
@@ -73,7 +56,7 @@ module Prism
         end
       else
         log(lookup: 'cname', host: host)
-        ['servers.cname=$1', host]
+        ['servers.cname=?', host]
       end
 
       if query
@@ -103,22 +86,20 @@ module Prism
       else
         cb.call nil
       end
-      
       cb
     end
 
     def find_player_by_username(username, *a, &b)
       cb = EM::Callback(*a, &b)
       EM.defer(proc {
-        results = pg.query(%Q{
+        db[%Q{
             select accounts.id, users.coins from accounts
               inner join users on users.id = accounts.user_id
-            where accounts.type = 'Accounts::Mojang'
-              and accounts.uid=$1
+            where accounts.type = ?
+              and accounts.uid = ?
               and users.deleted_at is null
             limit 1
-          }, [username])
-        results[0] if results.count > 0
+          }, 'Accounts::Mojang', username].first
       }, cb)
     end
 
@@ -133,7 +114,7 @@ module Prism
     end
 
     def valid_client(server)
-      funpack = Funpack.find(server['funpack_pc_id'])
+      funpack = Funpack.find(server[:funpack_pc_id])
       if funpack == '' || funpack.nil?
         kick_player "Bad funpack. Contact support@minefold.com"
       else
@@ -146,7 +127,7 @@ module Prism
     end
 
     def valid_server(server)
-      if %w(t 1 true).include?(server['shared'])
+      if server[:shared]
         shared_server(server)
       else
         normal_server(server)
@@ -154,11 +135,17 @@ module Prism
     end
 
     def normal_server(server)
-      if (server['creator_coins'] || '0').to_i <= 0
-        kick_player "#{server['creator_username']} is out of time. Bug them!"
-      else
+      if has_credit?(server)
         allow_request(server)
+      else
+        kick_player "#{server[:creator_username]} is out of credit. Bug them!"
       end
+    end
+
+    def has_credit?(server)
+      subscription_expiry = server[:subscription_expires_at] || (Time.now - 1)
+
+      (subscription_expiry > Time.now) || server[:creator_coins] > 0
     end
 
     def shared_server(server)
@@ -166,7 +153,7 @@ module Prism
         if player.nil?
           kick_player "Link your Minecraft account at minefold.com"
         else
-          if (player['coins'] || '0').to_i <= 0
+          if player[:coins] <= 0
             kick_player 'Out of time! Get more at minefold.com'
           else
             allow_request(server)
@@ -177,8 +164,8 @@ module Prism
 
     # TODO move into web. Or core.
     def access_policy(server)
-      settings = JSON.parse(server['settings'] || '{}')
-      
+      settings = JSON.parse(server[:settings] || '{}')
+
       policies = {
         '1' => {
           whitelist: (settings['whitelist'] || '').split
@@ -189,21 +176,29 @@ module Prism
       }
 
       policy = policies[0]
-      if policy_id = server['access_policy_id']
-        policy = policies[policy_id]
+      if policy_id = server[:access_policy_id]
+        policy = policies[policy_id.to_s]
       end
       policy
     end
 
     def allow_request(server)
-      @server_id = server['id'].to_i
-      server_pc_id = server['server_pc_id']
-      funpack_pc_id = server['funpack_pc_id']
+      @server_id = server[:id]
+      server_pc_id = server[:server_pc_id]
+      funpack_pc_id = server[:funpack_pc_id]
 
-      start_server(server_pc_id, funpack_pc_id, JSON.dump(
-        name: server['name'],
+      if plan_bolts = server[:plan_bolts]
+        # allocate based on subscription plan
+        allocation = "#{server[:bolt_allocations][plan_bolts - 1]}Mb"
+      else
+        # leave allocation up to brain
+        allocation = nil
+      end
+
+      start_server(server_pc_id, funpack_pc_id, allocation, JSON.dump(
+        name: server[:name],
         access: access_policy(server),
-        settings: JSON.load(server['settings'] || '{}')
+        settings: JSON.load(server[:settings] || '{}')
       ))
     end
 
@@ -220,11 +215,7 @@ module Prism
         args: [token, username]
     end
 
-    def start_server(server_pc_id, funpack_pc_id, data)
-      # if server_pc_id is nil, use a generated reply key until we have a real
-      # server_pc_id
-      reply_key = (server_pc_id || "req-#{BSON::ObjectId.new}")
-
+    def start_server(server_pc_id, funpack_pc_id, allocation, data)
       redis.sadd 'servers:shared', server_pc_id
 
       Scrolls.log({
@@ -232,7 +223,7 @@ module Prism
         server_id: server_pc_id,
         data: data,
         funpack_id: funpack_pc_id,
-        reply_key: reply_key
+        reply_key: server_pc_id
       })
 
 
@@ -240,14 +231,14 @@ module Prism
         server_id: server_pc_id,
         data: data,
         funpack_id: funpack_pc_id,
-        reply_key: reply_key
+        reply_key: server_pc_id,
+        allocation: allocation
 
-      listen_once_json "servers:requests:start:#{reply_key}", method(:reply_handler)
+      listen_once_json "servers:requests:start:#{server_pc_id}", method(:reply_handler)
     end
 
     def reply_handler reply
       if reply['server_id']
-        pg.exec('update servers set party_cloud_id=$1 where id=$2', [reply['server_id'], @server_id])
         redis.sadd 'servers:shared', reply['server_id']
       end
 
@@ -269,21 +260,11 @@ module Prism
     def connect_player_to_server player_id, server_id, host, port
       info "connecting to #{host}:#{port}"
 
-      # this tells prism to connect the player to the server
-      # TODO new prism will always send reply_key
-      if reply_key
-        redis.publish_json reply_key,
-          host: host,
-          port: port,
-          player_id: player_id,
-          world_id: server_id
-      else
-        redis.publish_json "players:connection_request:#{username}",
-          host: host,
-          port: port,
-          player_id: player_id,
-          world_id: server_id
-      end
+      redis.publish_json reply_key,
+        host: host,
+        port: port,
+        player_id: player_id,
+        world_id: server_id
     end
   end
 end

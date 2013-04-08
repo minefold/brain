@@ -1,116 +1,63 @@
 module Prism
   class Pinkies < Array
     def self.redis
-      Prism.redis
+      $redis_sync = begin
+        uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
+        Redis.new(host: uri.host, port: uri.port, password: uri.password)
+      end
     end
 
-    def self.collect *a, &b
+    def self.collect(*a, &b)
       cb = EM::Callback(*a, &b)
-
-      inject_heartbeats({}) do |h|
-        inject_pinky_states(h) do |h|
-          inject_pinky_servers(h) do |h|
-            inject_box_info(h) do |h|
-              cb.call Pinkies.from_hash(h)
-            end
-          end
-        end
-      end
-
+      EM.defer(method(:collect_sync), cb)
       cb
     end
-
-    def self.inject_heartbeats(initial, *a, &b)
-      cb = EM::Callback(*a, &b)
-      redis.keys("pinky:*:heartbeat") do |keys|
-        EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
-          redis.get(key) do |hb|
-
-            id = key.split(':')[1]
-
-            h[id] ||= {}
-            begin
-              heartbeat = JSON.load(hb)
-              h[id].merge!(heartbeat)
-            rescue => e
-              # if pinky is acting up this might not be valid json
-              puts e
-            end
-
-            iter.return(h)
-          end
-         }, proc{ |h| cb.call h })
-      end
-      cb
-    end
-
-    def self.inject_pinky_states(initial, *a, &b)
-      cb = EM::Callback(*a, &b)
-      redis.keys("pinky:*:state") do |keys|
-        EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
-          redis.get(key) do |state|
-            id = key.split(':')[1]
-
-            h[id] ||= {}
-            h[id].merge!('state' => state)
-
-            iter.return(h)
-          end
-         }, proc{ |h| cb.call h })
-      end
-      cb
-    end
-
-    def self.inject_pinky_servers(initial, *a, &b)
-      cb = EM::Callback(*a, &b)
-      redis.keys("pinky:*:servers:*") do |keys|
-        EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
-          redis.get(key) do |state|
-            _, pinky_id, _, server_id = key.split(':')
-
-            h[pinky_id] ||= {}
-            h[pinky_id]['servers'] ||= []
-            h[pinky_id]['servers'] << server_id
-
-            iter.return(h)
-          end
-         }, proc{ |h| cb.call h })
-      end
-      cb
-    end
-
-    def self.inject_box_info(initial, *a, &b)
-      cb = EM::Callback(*a, &b)
-      redis.keys("box:*") do |keys|
-        EM::Iterator.new(keys, 10).inject(initial, proc{ |h,key,iter|
-          redis.get(key) do |info|
-            id = key.split(':')[1]
-
-            h[id] ||= {}
-            h[id].merge!(JSON.load(info))
-
-            iter.return(h)
-          end
-         }, proc{ |h| cb.call h })
-      end
-      cb
-    end
-
-    def self.from_hash h
+    
+    def self.collect_sync
+      servers = collect_servers_sync
+      
       pinkies = Pinkies.new
-      h.each do |id, h|
+      collect_pinkies_sync.each do |pinky_id, h|
         pinkies << Pinky.new(
-          id,
+          pinky_id,
           Time.at(h['started_at'] || 0),
-          h['state'],
+          h[:state],
           h['freeDiskMb'],
           h['freeRamMb'],
           h['idleCpu'],
           BoxType.find(h['type']),
-          (h['servers'] ||[]).map{|server_id| Server.new(server_id) }
-        )
+          (servers[pinky_id] ||[]).map{|s| Server.new(s[:server_id], s[:ram_alloc], s[:slots]) }
+        ) # TODO deprecate slots
       end
       pinkies
+    end
+    
+    def self.collect_servers_sync
+      redis.keys("pinky:*:servers:*").inject({}) do |h, key|
+        _, pinky_id, _, server_id = key.split(':')
+        h[pinky_id] ||= []
+        h[pinky_id] << {
+          server_id: server_id,
+          slots: redis.get("server:#{server_id}:slots").to_i,
+          ram_alloc: redis.get("server:#{server_id}:ram_alloc").to_i
+        }
+        h
+      end
+    end
+    
+    def self.collect_pinkies_sync
+      redis.keys("pinky:*:heartbeat").inject({}) do |h, heartbeat_key|
+        id = heartbeat_key.split(':')[1]
+        
+        heartbeat = JSON.load(redis.get(heartbeat_key)) rescue nil
+        box = JSON.load(redis.get("box:#{id}")) rescue nil
+        if heartbeat && box
+          h[id] = {
+            state: redis.get("pinky:#{id}:state"),
+          }.merge(heartbeat).merge(box)
+        end
+        h
+      end
     end
   end
 end

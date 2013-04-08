@@ -7,6 +7,7 @@ module Prism
     end
   end
 
-  class Server < Struct.new(:id)
+  # TODO deprecate slots
+  class Server < Struct.new(:id, :ram_allocation, :slots)
   end
 end

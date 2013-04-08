@@ -85,6 +85,7 @@ GEM
     ruby-hmac (0.4.0)
     rubyzip (0.9.9)
     scrolls (0.2.4)
+    sequel (3.44.0)
     sinatra (1.4.1)
       rack (~> 1.5, >= 1.5.2)
       rack-protection (~> 1.4)
@@ -125,6 +126,7 @@ DEPENDENCIES
   resque
   rubyzip
   scrolls
+  sequel
   turn
   uuid
   yajl-ruby

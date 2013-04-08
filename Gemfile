@@ -17,6 +17,7 @@ gem 'colored'
 gem 'uuid'
 gem 'bugsnag'
 gem 'pg'
+gem 'sequel'
 
 gem 'resque'
 gem 'librato-metrics', require: 'librato/metrics'

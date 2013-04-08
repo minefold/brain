@@ -11,22 +11,7 @@ require 'pry'
 include Prism::Mongo
 
 $mongo = mongo_connect
-$pg ||= if ENV['DATABASE_URL']
-  url = URI.parse(ENV['DATABASE_URL'])
-  PG::Connection.new(
-    host:     url.host,
-    port:     url.port,
-    user:     url.user,
-    password: url.password,
-    dbname:   url.path[1..-1]
-  )
-else
-  PG::Connection.new(
-    host: 'localhost',
-    dbname: 'minefold_development'
-  )
-end
-
+$db ||= Sequel.connect(ENV['DATABASE_URL'] || 'postgres://localhost/minefold_development')
 
 def oid(id)
   BSON::ObjectId(id.to_s)
@@ -38,6 +23,10 @@ end
 
 def snapshot(snapshot_id)
   $mongo['snapshots'].find(_id:oid(snapshot_id)).first
+end
+
+def pinkies
+  Pinkies.collect_sync
 end
 
 def snapshots(server_id)
