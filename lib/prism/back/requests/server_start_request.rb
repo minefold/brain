@@ -136,7 +136,6 @@ module Prism
             start_with_settings (server.new_snapshot_id || server.snapshot_id),
               data,
               funpack_id,
-              ram_required,
               start_options
 
           else

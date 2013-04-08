@@ -52,7 +52,7 @@ module Prism
         if id < 0 || id > 2147483647
           nil
         else
-          ['servers.id=$1', $1.to_i]
+          ['servers.id=?', $1]
         end
       else
         log(lookup: 'cname', host: host)
@@ -61,7 +61,7 @@ module Prism
 
       if query
         EM.defer(proc {
-          results = pg.query(%Q{
+          statement = %Q{
               select servers.id,
                      servers.name,
                      servers.party_cloud_id as server_pc_id,
@@ -80,8 +80,8 @@ module Prism
 
               where #{query[0]} and servers.deleted_at is null
               limit 1
-            }, [query[1]])
-          results[0] if results.count > 0
+            }
+          db[statement, query[1]].first
         }, cb)
       else
         cb.call nil
