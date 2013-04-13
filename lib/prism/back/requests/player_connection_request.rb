@@ -164,7 +164,8 @@ module Prism
         if player.nil?
           kick_player "Link your Minecraft account at minefold.com"
         else
-          if player[:subscription_expires_at] < Time.now && player[:coins] <= 0
+          expiry = player[:subscription_expires_at] || Time.now - 1.day
+          if expiry < Time.now && player[:coins] <= 0
             kick_player 'Out of time! Get more at minefold.com'
           else
             allow_request(server)
