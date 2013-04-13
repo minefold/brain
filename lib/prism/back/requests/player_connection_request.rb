@@ -49,10 +49,10 @@ module Prism
         log(lookup: 'dynamic', id: $1)
         id = $1.to_i
         # validate integer range before PG query
-        if id < 0 || id > 2147483647
+        if id <= 0 || id > 2147483647
           nil
         else
-          ['servers.id=?', $1]
+          ['servers.id=?', id]
         end
       else
         log(lookup: 'cname', host: host)
@@ -98,8 +98,13 @@ module Prism
       cb = EM::Callback(*a, &b)
       EM.defer(proc {
         db[%Q{
-            select accounts.id, users.coins from accounts
+            select accounts.id,
+                   users.coins,
+                   subscriptions.expires_at as subscription_expires_at
+
+            from accounts
               inner join users on users.id = accounts.user_id
+               left join subscriptions on users.subscription_id = subscriptions.id
             where accounts.type = ?
               and accounts.uid = ?
               and users.deleted_at is null
@@ -153,12 +158,13 @@ module Prism
       (subscription_expiry > Time.now) || server[:creator_coins] > 0
     end
 
+    # TODO deprecate shared servers
     def shared_server(server)
       find_player_by_username(username) do |player|
         if player.nil?
           kick_player "Link your Minecraft account at minefold.com"
         else
-          if player[:coins] <= 0
+          if player[:subscription_expires_at] < Time.now && player[:coins] <= 0
             kick_player 'Out of time! Get more at minefold.com'
           else
             allow_request(server)
@@ -201,7 +207,7 @@ module Prism
           bolts: plan_bolts,
           allocation: allocation
         })
-        
+
       else
         # leave allocation up to brain
         allocation = nil
