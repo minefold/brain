@@ -19,7 +19,7 @@ class ImportWorldJob
     end
 
     working_dir = File.join(
-      Dir.tmpdir, Time.now.to_i.to_s, File.basename(url))
+      Dir.tmpdir, Time.now.to_i.to_s, simplify(File.basename(url)))
 
     chdir(working_dir) do
       chdir('world') do
@@ -96,11 +96,19 @@ class ImportWorldJob
     })
     snapshot_id
   end
+  
+  def self.simplify(name)
+    name.gsub(/([^a-zA-Z0-9])/, '_')
+  end
+  
+  def self.bash_escape(arg)
+    arg.gsub(/([^a-zA-Z0-9])/, "\\\\" + '\1')
+  end
 
   def self.restore_zip_archive(url)
     local_tmp_file = File.join(Dir.tmpdir, "#{Time.now.to_i.to_s}.zip")
     `mkdir -p #{File.dirname(local_tmp_file)}`
-    success = system "curl --silent -Lo '#{local_tmp_file}' '#{url}'"
+    success = system "curl --globoff --silent -Lo '#{local_tmp_file}' #{bash_escape(url)}"
     if !success
       Brain.log.info(
         event: 'download_failed',
