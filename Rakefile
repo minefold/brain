@@ -43,11 +43,11 @@ task "resque:setup" do
       mongo_uri = ::Mongo::URIParser.new(uri)
       auth = mongo_uri.auths.first
 
-      db = mongo[auth['db_name']]
-      db.authenticate auth['username'], auth['password']
+      db = mongo[auth[:db_name]]
+      db.authenticate auth[:username], auth[:password]
       db
     else
-      db_name = mongo.auths.any? ? mongo.auths.first['db_name'] : nil
+      db_name = mongo.auths.any? ? mongo.auths.first[:db_name] : nil
       db_name ||= URI.parse(uri).path[1..-1]
       mongo[db_name]
     end
