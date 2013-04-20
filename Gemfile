@@ -1,4 +1,4 @@
-source :rubygems
+source 'https://rubygems.org'
 
 gem 'rake'
 
@@ -7,8 +7,8 @@ gem 'em-http-request'
 
 gem 'fog', '~> 1.2.0' #code: '~/code/whatupdave/fog'
 
-gem 'mongo', '~> 1.8.0'
-gem 'bson_ext', '~> 1.8.0'
+gem 'mongo', '~> 1.8.3'
+gem 'bson_ext', '~> 1.8.3'
 
 gem "hiredis", "~> 0.4.0"
 gem "redis", ">= 2.2.0", :require => ["redis/connection/hiredis", "redis"]
