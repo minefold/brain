@@ -1,5 +1,6 @@
 require 'core_ext/hash'
 require 'core_ext/string'
+require 'tron'
 
 module Prism
   class ServerEvent < Request
@@ -179,7 +180,10 @@ module Prism
             else
               redis.publish_json "servers:requests:stop:#{server_id}", {}
               Resque.push 'high', class: 'ServerStoppedJob', args: [
-                Time.parse(ts).to_i, server_id]
+                Time.parse(ts).to_i, server_id
+              ]
+              
+              Tron.server_stopped server_id, Time.now
             end
           end
         end

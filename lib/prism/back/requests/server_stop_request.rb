@@ -1,3 +1,5 @@
+require 'tron'
+
 module Prism
   class ServerStopRequest < Request
     include Logging
@@ -18,16 +20,20 @@ module Prism
         case state
         when 'starting'
           debug "stop request ignored: server:#{server_id} is starting"
+          stopped
 
         when 'stopping'
           debug "stop request ignored: server:#{server_id} is already stopping"
-
+          stopped
+          
         when 'up'
           debug "stopping server:#{server_id}"
           stop_server
 
         else
           debug "stop request ignored: server:#{server_id} is not running"
+          stopped
+          
         end
       end
     end
@@ -46,6 +52,10 @@ module Prism
             serverId: server_id
         end
       end
+    end
+    
+    def stopped
+      Tron.server_stopped server_id, Time.now
     end
   end
 end
