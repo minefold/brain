@@ -143,6 +143,8 @@ module Prism
                 ps['port'],
                 Time.parse(ts).to_i
               ]
+              
+              Tron.server_started Time.parse(ts), server_id.to_s, pinky['ip'], ps['port']
             end
           end
         end
@@ -157,6 +159,10 @@ module Prism
       redis.publish_json "servers:requests:start:#{server_id}",
         failed: 'Server failed to start. Please contact support'
       Resque.push 'high', class: 'ServerStoppedJob', args: [Time.now.to_i, server_id]
+      
+      # TODO get exit status
+      exit_status = 1
+      Tron.server_stopped(Time.now, server_id, exit_status) 
     end
 
     def stopping
@@ -183,7 +189,7 @@ module Prism
                 Time.parse(ts).to_i, server_id
               ]
               
-              Tron.server_stopped server_id, Time.now
+              Tron.server_stopped(Time.now, server_id, 0) # exit status
             end
           end
         end

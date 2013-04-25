@@ -55,7 +55,7 @@ module Prism
     end
     
     def stopped
-      Tron.server_stopped server_id, Time.now
+      Tron.server_stopped(Time.now, server_id, 0) # exit status
     end
   end
 end

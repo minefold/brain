@@ -2,3 +2,4 @@
 .prod
 .stag
 .ruby-version
+.dev

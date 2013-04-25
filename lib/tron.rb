@@ -1,15 +1,24 @@
+require 'date'
+
 class Tron
   extend Resque::Helpers
   
-  def self.server_stopped(server_id, timestamp)
-    Tron.enqueue 'LegacySessionStoppedJob', server_id, timestamp.to_i
-    Tron.publish "servers:requests:stop:#{server_id}"
+  def self.server_started(timestamp, server_id, ip, port)
+    Tron.enqueue 'LegacySessionStartedJob', server_id, timestamp.to_datetime.rfc3339, ip, port
+  end
+
+  def self.server_stopped(timestamp, server_id, exit_status)
+    Tron.enqueue 'LegacySessionStoppedJob', server_id, timestamp.to_datetime.rfc3339, exit_status
+  end
+
+  def self.player_connected(timestamp, server_id)
+    Tron.enqueue 'LegacyPlayerConnectedJob', server_id, timestamp.to_datetime.rfc3339
   end
   
-  def self.enqueue job, *args
+  def self.enqueue(job, *args)
     if r = redis
-      r.sadd "resque:queues", "high"
-      r.rpush "resque:queue:high", encode(class: job, args: args)
+      r.sadd "queues", "default"
+      r.rpush "queue:default", encode(class: job, args: args)
     end
   end
   
