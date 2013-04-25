@@ -11,10 +11,14 @@ class Tron
     Tron.enqueue 'LegacySessionStoppedJob', server_id, timestamp.to_datetime.rfc3339, exit_status
   end
 
-  def self.player_connected(timestamp, server_id)
-    Tron.enqueue 'LegacyPlayerConnectedJob', server_id, timestamp.to_datetime.rfc3339
+  def self.player_session_started(timestamp, server_id, distinct_id, username)
+    Tron.enqueue 'LegacyPlayerSessionStartedJob', server_id, timestamp.to_datetime.rfc3339, distinct_id, username
   end
-  
+
+  def self.player_session_stopped(timestamp, server_id, distinct_id, username)
+    Tron.enqueue 'LegacyPlayerSessionStoppedJob', server_id, timestamp.to_datetime.rfc3339, distinct_id, username
+  end
+
   def self.enqueue(job, *args)
     if r = redis
       r.sadd "queues", "default"

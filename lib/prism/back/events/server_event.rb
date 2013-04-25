@@ -213,19 +213,23 @@ module Prism
     end
 
     def player_connected
-      timestamp = Time.parse(ts).to_i
+      timestamp = Time.parse(ts)
       redis.sadd "server:#{server_id}:players", (uid || username)
 
       Resque.push 'high', class: 'PlayerConnectedJob',
-        args: [timestamp, server_id, (uid || username)]
+        args: [timestamp.to_i, server_id, (uid || username)]
+        
+      Tron.player_session_started(timestamp, server_id, uid, username)
     end
 
     def player_disconnected
       redis.srem "server:#{server_id}:players", (uid || username)
 
-      timestamp = Time.parse(ts).to_i
+      timestamp = Time.parse(ts)
       Resque.push 'high', class: 'PlayerDisconnectedJob',
-        args: [timestamp, server_id, (uid || username)]
+        args: [timestamp.to_i, server_id, (uid || username)]
+        
+      Tron.player_session_stopped(timestamp, server_id, uid, username)
     end
 
     def players_list
