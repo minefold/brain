@@ -61,6 +61,14 @@ class Funpack < Struct.new(:id, :slug, :client_version, :bump_message, :allocati
         AllocationFactors.new(
           cpu: 0.5, ram: 0.9, players: 5
         )),
+
+      Funpack.new(
+        '5179c548fc99860002000001', 'minecraft-mojang',
+        nil, nil,
+        AllocationFactors.new(
+          cpu: 1, ram: 1, players: 10
+        )),
+
     ]
   end
 end
