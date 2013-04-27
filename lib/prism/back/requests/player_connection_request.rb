@@ -137,7 +137,7 @@ module Prism
     end
 
     def valid_server(server)
-      if server[:shared]
+      if !active_subscription?(server) && server[:shared]
         shared_server(server)
       else
         normal_server(server)
@@ -153,9 +153,13 @@ module Prism
     end
 
     def has_credit?(server)
+      active_subscription?(server) || server[:creator_coins] > 0
+    end
+
+    def active_subscription?(server)
       subscription_expiry = server[:subscription_expires_at] || (Time.now - 1)
 
-      (subscription_expiry > Time.now) || server[:creator_coins] > 0
+      (subscription_expiry > Time.now)
     end
 
     # TODO deprecate shared servers
