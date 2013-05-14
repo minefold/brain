@@ -31,6 +31,7 @@ module Prism
     EM.error_handler do |e|
       $log.error(e)
       Bugsnag.notify(e)
+      raise
     end
 
     # EM.add_periodic_timer(10) do
