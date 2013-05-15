@@ -143,7 +143,7 @@ module Prism
                 ps['port'],
                 Time.parse(ts).to_i
               ]
-              
+
               Tron.server_started Time.parse(ts), server_id.to_s, pinky['ip'], ps['port']
             end
           end
@@ -159,10 +159,10 @@ module Prism
       redis.publish_json "servers:requests:start:#{server_id}",
         failed: 'Server failed to start. Please contact support'
       Resque.push 'high', class: 'ServerStoppedJob', args: [Time.now.to_i, server_id]
-      
+
       # TODO get exit status
       exit_status = 1
-      Tron.server_stopped(Time.now, server_id, exit_status) 
+      Tron.server_stopped(Time.now, server_id, exit_status)
     end
 
     def stopping
@@ -175,6 +175,7 @@ module Prism
         redis.del("server:#{server_id}:players")
         redis.del("server:#{server_id}:slots")
         redis.del("server:#{server_id}:funpack")
+        redis.del("server:#{server_id}:ram_alloc")
 
         if state == 'starting'
           start_failed
@@ -188,7 +189,7 @@ module Prism
               Resque.push 'high', class: 'ServerStoppedJob', args: [
                 Time.parse(ts).to_i, server_id
               ]
-              
+
               Tron.server_stopped(Time.now, server_id, 0) # exit status
             end
           end
@@ -218,7 +219,7 @@ module Prism
 
       Resque.push 'high', class: 'PlayerConnectedJob',
         args: [timestamp.to_i, server_id, (uid || username)]
-        
+
       Tron.player_session_started(timestamp, server_id, uid, username)
     end
 
@@ -228,7 +229,7 @@ module Prism
       timestamp = Time.parse(ts)
       Resque.push 'high', class: 'PlayerDisconnectedJob',
         args: [timestamp.to_i, server_id, (uid || username)]
-        
+
       Tron.player_session_stopped(timestamp, server_id, uid, username)
     end
 
