@@ -43,7 +43,7 @@ module Prism
             sum + s.slots * RAM_MB_PER_SLOT
           end
         end
-        
+
         {
           id: pinky.id,
           state: pinky.state,

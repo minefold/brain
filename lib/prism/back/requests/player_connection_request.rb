@@ -69,12 +69,14 @@ module Prism
                      servers.shared,
                      servers.access_policy_id,
                      funpacks.party_cloud_id as funpack_pc_id,
-                     funpacks.bolt_allocations,
+                     plan_allocations.ram,
+                     plan_allocations.players,
                      worlds.party_cloud_id as snapshot_pc_id,
                      users.coins as creator_coins,
                      users.username as creator_username,
                      subscriptions.expires_at as subscription_expires_at,
-                     plans.bolts as plan_bolts
+                     plans.bolts as plan_bolts,
+                     plans.name as plan
 
               from servers
                 inner join funpacks on servers.funpack_id = funpacks.id
@@ -82,6 +84,9 @@ module Prism
                 inner join users on servers.creator_id = users.id
                  left join subscriptions on users.subscription_id = subscriptions.id
                  left join plans on subscriptions.plan_id = plans.id
+                 left join plan_allocations on
+                   plans.id = plan_allocations.plan_id and
+                   funpacks.id = plan_allocations.funpack_id
 
               where #{query[0]} and servers.deleted_at is null
               limit 1
@@ -203,26 +208,30 @@ module Prism
       server_pc_id = server[:server_pc_id]
       funpack_pc_id = server[:funpack_pc_id]
 
-      if plan_bolts = server[:plan_bolts]
-        # allocate based on subscription plan
-        allocation = "#{server[:bolt_allocations][plan_bolts - 1]}Mb"
-        Scrolls.log({
-          at: 'using_subscription',
-          expires_at: server[:subscription_expires_at],
-          bolts: plan_bolts,
-          allocation: allocation
-        })
-
+      if server[:plan] && server[:ram].nil?
+        kick_player "Server not available on #{server[:plan]} plan. Upgrade at minefold.com/plans"
       else
         # leave allocation up to brain
         allocation = nil
-      end
 
-      start_server(server_pc_id, funpack_pc_id, allocation, JSON.dump(
-        name: server[:name],
-        access: access_policy(server),
-        settings: JSON.load(server[:settings] || '{}')
-      ))
+        if plan_bolts = server[:plan_bolts]
+          # allocate based on subscription plan
+          allocation = "#{server[:ram]}Mb"
+          Scrolls.log({
+            at: 'using_subscription',
+            expires_at: server[:subscription_expires_at],
+            bolts: plan_bolts,
+            ram: server[:ram],
+            allocation: allocation
+          })
+        end
+
+        start_server(server_pc_id, funpack_pc_id, allocation, JSON.dump(
+          name: server[:name],
+          access: access_policy(server),
+          settings: JSON.load(server[:settings] || '{}')
+        ))
+      end
     end
 
     def verification_request(token)
