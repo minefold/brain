@@ -26,7 +26,7 @@ module Prism
 
     def db
       $db ||= begin
-        db = Sequel.connect(ENV['DATABASE_URL'] || 'postgres://localhost/minefold_development')
+        db = Sequel.connect(ENV['MINEFOLD_WEB_DB'] || 'postgres://localhost/minefold_development')
         db.extension :pg_array
         db
       end

@@ -11,7 +11,7 @@ require 'pry'
 include Prism::Mongo
 
 $mongo = mongo_connect
-$db ||= Sequel.connect(ENV['DATABASE_URL'] || 'postgres://localhost/minefold_development')
+$db ||= Sequel.connect(ENV['MINEFOLD_WEB_DB'] || 'postgres://localhost/minefold_development')
 
 def oid(id)
   BSON::ObjectId(id.to_s)
