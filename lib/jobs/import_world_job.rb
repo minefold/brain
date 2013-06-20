@@ -96,11 +96,11 @@ class ImportWorldJob
     })
     snapshot_id
   end
-  
+
   def self.simplify(name)
     name.gsub(/([^a-zA-Z0-9])/, '_')
   end
-  
+
   def self.bash_escape(arg)
     arg.gsub(/([^a-zA-Z0-9])/, "\\\\" + '\1')
   end
@@ -141,10 +141,6 @@ class ImportWorldJob
       raise StandardError, result
     end
     result
-  end
-
-  def self.s3curl(url)
-    "#{Brain.root}/bin/s3curl -- '#{url}' --silent --show-error --globoff"
   end
 
   def self.unzip(file)

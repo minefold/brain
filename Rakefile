@@ -18,8 +18,8 @@ task :test do
   end
 end
 
-def redis_connection
-  uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
+def redis_connection(url)
+  uri = URI.parse(url || 'redis://localhost:6379/')
   Redis.new(:host => uri.host, :port => uri.port, :password => uri.password)
 end
 
@@ -31,8 +31,8 @@ task "resque:setup" do
   require 'jobs'
   require 'json'
 
-  $redis = redis_connection
-  Resque.redis = $redis
+  $redis = redis_connection(ENV['MINEFOLD_REDIS'])
+  Resque.redis = redis_connection(ENV['MINEFOLD_REDIS'])
 
   $mongo = begin
     uri = ENV['MONGO_URL'] || 'mongodb://localhost:27017/minefold_development'

@@ -2,7 +2,7 @@ module Prism
   class Pinkies < Array
     def self.redis
       $redis_sync = begin
-        uri = URI.parse(ENV['REDIS_URL'] || 'redis://localhost:6379/')
+        uri = URI.parse(ENV['PARTY_CLOUD_REDIS'] || 'redis://localhost:6379/')
         Redis.new(host: uri.host, port: uri.port, password: uri.password)
       end
     end
@@ -12,10 +12,10 @@ module Prism
       EM.defer(method(:collect_sync), cb)
       cb
     end
-    
+
     def self.collect_sync
       servers = collect_servers_sync
-      
+
       pinkies = Pinkies.new
       collect_pinkies_sync.each do |pinky_id, h|
         pinkies << Pinky.new(
@@ -31,7 +31,7 @@ module Prism
       end
       pinkies
     end
-    
+
     def self.collect_servers_sync
       redis.keys("pinky:*:servers:*").inject({}) do |h, key|
         _, pinky_id, _, server_id = key.split(':')
@@ -44,11 +44,11 @@ module Prism
         h
       end
     end
-    
+
     def self.collect_pinkies_sync
       redis.keys("pinky:*:heartbeat").inject({}) do |h, heartbeat_key|
         id = heartbeat_key.split(':')[1]
-        
+
         heartbeat = JSON.load(redis.get(heartbeat_key)) rescue nil
         box = JSON.load(redis.get("box:#{id}")) rescue nil
         if heartbeat && box
