@@ -2,6 +2,7 @@ require 'tmpdir'
 require 'zip/zip'
 
 class ImportError < StandardError; end
+class ServerNotFoundError < StandardError; end
 
 class ImportWorldJob
   @queue = :pc
