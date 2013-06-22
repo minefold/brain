@@ -31,7 +31,7 @@ task "resque:setup" do
   require 'jobs'
   require 'json'
 
-  $redis = redis_connection(ENV['MINEFOLD_REDIS'])
+  $redis = redis_connection(ENV['PARTY_CLOUD_REDIS'])
   Resque.redis = redis_connection(ENV['MINEFOLD_REDIS'])
 
   $mongo = begin
