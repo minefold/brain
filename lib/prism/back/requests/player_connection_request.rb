@@ -142,14 +142,6 @@ module Prism
     end
 
     def valid_server(server)
-      if !active_subscription?(server) && server[:shared]
-        shared_server(server)
-      else
-        normal_server(server)
-      end
-    end
-
-    def normal_server(server)
       if has_credit?(server)
         allow_request(server)
       else
@@ -165,22 +157,6 @@ module Prism
       subscription_expiry = server[:subscription_expires_at] || (Time.now - 1)
 
       (subscription_expiry > Time.now)
-    end
-
-    # TODO deprecate shared servers
-    def shared_server(server)
-      find_player_by_username(username) do |player|
-        if player.nil?
-          kick_player "Link your Minecraft account at minefold.com"
-        else
-          expiry = player[:subscription_expires_at] || Time.now - 100
-          if expiry < Time.now && player[:coins] <= 0
-            kick_player 'Out of time! Get more at minefold.com'
-          else
-            allow_request(server)
-          end
-        end
-      end
     end
 
     # TODO move into web. Or core.
