@@ -2,7 +2,7 @@ require 'date'
 
 class Tron
   extend Resque::Helpers
-  
+
   def self.server_started(timestamp, server_id, ip, port)
     Tron.enqueue 'LegacySessionStartedJob', server_id, timestamp.to_datetime.rfc3339, ip, port
   end
@@ -25,17 +25,15 @@ class Tron
       r.rpush "queue:default", encode(class: job, args: args)
     end
   end
-  
+
   def self.publish(channel, msg='')
     if r = redis
       r.publish channel, msg
     end
   end
-  
+
   def self.redis
-    if url = ENV['TRON_REDIS_URL']
-      Redis.connect(url: url)
-    end
+    $tron_redis ||= Redis.connect(url: ENV['TRON_REDIS_URL'])
   end
 end
 
