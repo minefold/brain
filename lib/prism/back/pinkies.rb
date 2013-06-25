@@ -1,7 +1,7 @@
 module Prism
   class Pinkies < Array
     def self.redis
-      $redis_sync = begin
+      $redis_sync ||= begin
         uri = URI.parse(ENV['PARTY_CLOUD_REDIS'] || 'redis://localhost:6379/')
         Redis.new(host: uri.host, port: uri.port, password: uri.password)
       end
