@@ -143,7 +143,7 @@ module Prism
         start_options.merge!(
           'serverId' => server_id,
           'funpack' => funpack.url,
-          'funpackId' => funpack_id,
+          'funpackId' => funpack.id,
           'funpackUrl' => funpack.url,
           'data' => data
         )
