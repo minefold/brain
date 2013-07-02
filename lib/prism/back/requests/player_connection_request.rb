@@ -263,7 +263,7 @@ module Prism
         host: host,
         port: port,
         player_id: player_id,
-        world_id: server_id
+        server_id: server_id
     end
   end
 end
